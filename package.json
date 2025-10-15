@@ -1,6 +1,6 @@
 {
   "name": "@mockfetch/mockfetch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Mock the fetch function in the simplest way, including streaming.",
   "author": {
     "name": "Ferdinand Prantl",
