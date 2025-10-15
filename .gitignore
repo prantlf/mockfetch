@@ -1,0 +1,6 @@
+.DS_Store
+lib/*.cjs
+lib/*.umd.js
+lib/*.map
+lib/*.min.*
+node_modules

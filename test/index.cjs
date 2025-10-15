@@ -1,0 +1,13 @@
+const { ok } = require('node:assert')
+const exported = require('../lib/index.cjs')
+
+ok(typeof exported === 'object' && exported)
+ok(typeof exported.getFetchConfiguration === 'function')
+ok(typeof exported.setFetchConfiguration === 'function')
+ok(typeof exported.includesMockedFetch === 'function')
+ok(typeof exported.mockFetch === 'function')
+ok(typeof exported.unmockFetch === 'function')
+ok(typeof exported.unmockAllFetches === 'function')
+ok(typeof exported.isFetchReplaced === 'function')
+ok(typeof exported.replaceFetch === 'function')
+ok(typeof exported.restoreFetch === 'function')

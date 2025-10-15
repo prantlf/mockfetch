@@ -1,5 +1,5 @@
 # Changes
 
-## 2025-10-15 (0.0.2)
+## 0.0.2 (2025-10-15)
 
-Initial release
+Prepare automatic releases.
