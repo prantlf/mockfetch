@@ -33,9 +33,10 @@ jobs:
     - run: pnpm i --frozen-lockfile --no-verify-store-integrity
     - run: npm run build
     - run: npm test
-    - uses: prantlf/publish-release-action@v1
-      if: ${{ github.ref_name == 'master' }}
-      with:
-        no-npm-auth: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - run: npm publish --access public --verbose
+    # - uses: prantlf/publish-release-action@v1
+    #   if: ${{ github.ref_name == 'master' }}
+    #   with:
+    #     no-npm-auth: true
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
