@@ -1,6 +1,3 @@
 .DS_Store
-lib/*.cjs
-lib/*.umd.js
-lib/*.map
-lib/*.min.*
+dist
 node_modules

@@ -4,7 +4,7 @@ import {
   getFetchConfiguration, setFetchConfiguration,
   includesMockedFetch, mockFetch, unmockFetch, unmockAllFetches,
   isFetchReplaced, replaceFetch, restoreFetch
-} from '../lib/index.js'
+} from '../dist/index.js'
 
 const originalFetch = globalThis.fetch
 

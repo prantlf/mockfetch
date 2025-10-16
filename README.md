@@ -26,10 +26,18 @@ This package is usually installed as a local dependency:
 $ npm i @mockfetch/mockfetch
 ```
 
-Or referenced on a HTML page from a CDN:
+Or loaded on a HTML page from the CDN, declaring a global object `mockfetch` form all named exports:
 
 ```html
-<script src="https://unpkg.com/mockfetch@0.0.3/lib/index.umd.min.js"></script>
+<script src="https://unpkg.com/mockfetch@0.2.0/dist/index.umd.min.js"></script>
+```
+
+Or loaded on a HTML page from the CDN, importing just the needed named exports locally:
+
+```html
+<script type="module">
+  import { mockFetch } from 'https://unpkg.com/mockfetch@0.2.0/dist/index.min.js'
+</script>
 ```
 
 Make sure, that you use it with a JavaScript VM which supports the [Fetch API].
@@ -51,8 +59,8 @@ setFetchConfiguration({
 
 // registering mocked fetch handles by URL and method
 includesMockedFetch({ url, method? })
-willMockFetch({ url, method? })
-mockFetch({ url, method?, response })
+willMockFetch(urlOrRequest, requestOptions?)
+mockFetch({ url, method?, responseDelay?, response })
 unmockFetch({ url, method? })
 unmockAllFetches()
 
@@ -80,11 +88,12 @@ The defaults are optimised for fully mocked unit tests:
 
 Mock parameters:
 
-| Name       | Default | Description |
-|:-----------|---------|:------------|
-| `url`      |  none   | a `'string'` to match exactly the input URL (the scheme may be omitted, for example: `'//server/api/ping'`), or a `RegExp` for the ultimate flexibility |
-| `method`   |  `GET`  | a HTTP method to match the input method (case-insensitively) |
-| `response` |  none   | an object describing the response, or an instance of [`Response`], or a method (synchronous or asynchronous) accepting a [`Request`] and returning a [`Response`] |
+| Name            |    Default   | Description |
+|:----------------|--------------|:------------|
+| `url`           |     none     | a `'string'` to match exactly the input URL (the scheme may be omitted, for example: `'//server/api/ping'`), or a `RegExp` for the ultimate flexibility |
+| `method`        |     `GET`    | a HTTP method to match the input method (case-insensitively) |
+| `responseDelay` |  `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
+| `response`      |     none     | an object describing the response, or an instance of [`Response`], or a method (synchronous or asynchronous) accepting a [`Request`] and returning a [`Response`] |
 
 When looking for a `fetch` mock, the `fetch` handlers are evaluated in the order in which they were registered. The first one which matches the URL and method will be executed.
 

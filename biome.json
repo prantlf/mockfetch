@@ -3,12 +3,9 @@
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "files": {
     "includes": [
-      "lib/**",
-      "!lib/*.cjs",
-      "!lib/*.umd.js",
-      "!lib/*.min.*",
+      "src/**",
       "test/**",
-      "*.js*"
+      "*.js"
     ]
   },
   "linter": {

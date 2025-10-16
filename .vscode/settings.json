@@ -1,11 +1,12 @@
 {
   "files.exclude": {
     "node_modules": true,
-    "lib/*.map": true,
-    "lib/*.min.*": true
+    "dist/*.map": true,
+    "dist/*.min.*": true
   },
   "search.exclude": {
-    "lib/*.cjs": true,
-    "lib/*.umd.js": true
+    "dist/*.d.ts": true,
+    "dist/*.cjs": true,
+    "dist/*.js": true
   }
 }

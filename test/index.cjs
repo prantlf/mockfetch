@@ -1,9 +1,10 @@
 const { ok } = require('node:assert')
-const exported = require('../lib/index.cjs')
+const exported = require('../dist/index.cjs')
 
 ok(typeof exported === 'object' && exported)
 ok(typeof exported.getFetchConfiguration === 'function')
 ok(typeof exported.setFetchConfiguration === 'function')
+ok(typeof exported.willMockFetch === 'function')
 ok(typeof exported.includesMockedFetch === 'function')
 ok(typeof exported.mockFetch === 'function')
 ok(typeof exported.unmockFetch === 'function')
