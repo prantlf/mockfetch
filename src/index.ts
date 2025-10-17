@@ -13,12 +13,6 @@ export interface FetchConfiguration {
   handleUnmockedRequests: 'pass-through' | 'return-404' | 'throw-error'
 
   /**
-   * set to `true` to throw an error, if the same `fetch` handler is registered, instead of replacing the earlier one silently
-   * @default false
-   */
-  replaceMockedFetches: boolean
-
-  /**
    * a time duration to delay the mocked requests by default (in milliseconds)
    * @default 0
    */
@@ -39,7 +33,6 @@ export interface FetchConfiguration {
 
 const configuration: FetchConfiguration = {
   handleUnmockedRequests: 'throw-error',
-  replaceMockedFetches: false,
   responseDelay: 0,
   autoReplaceFetch: true,
   logging: true
@@ -56,16 +49,13 @@ export function getFetchConfiguration(): FetchConfiguration {
  * sets one or more `fetch` configuration parameters
  */
 export function setFetchConfiguration(options: FetchConfiguration) {
-  const { handleUnmockedRequests, replaceMockedFetches, responseDelay, autoReplaceFetch, logging } = options
+  const { handleUnmockedRequests, responseDelay, autoReplaceFetch, logging } = options
   if (handleUnmockedRequests) {
     const unmockedRequestHandling = ['pass-through', 'return-404', 'throw-error']
     if (!unmockedRequestHandling.includes(handleUnmockedRequests)) {
       throw Error(`Invalid handleUnmockedRequests: ${handleUnmockedRequests}`)
     }
     configuration.handleUnmockedRequests = handleUnmockedRequests
-  }
-  if (typeof replaceMockedFetches === 'boolean') {
-    configuration.replaceMockedFetches = replaceMockedFetches
   }
   if (responseDelay >= 0) {
     configuration.responseDelay = responseDelay
@@ -182,12 +172,7 @@ export function includesMockedFetch(specification: FetchSpecification): boolean 
  * registers a mock for a `fetch` call
  */
 export function mockFetch(handler: FetchHandler): FetchHandler {
-  const { url, method } = normalizeHandler(handler)
-  const index = findFetchHandler(url, method as string)
-  if (index >= 0 && !configuration.replaceMockedFetches) {
-    const handler = fetchHandlers[index]
-    throw Error(`Fetch already mocked: ${method} ${handler.url}`)
-  }
+  const { method } = normalizeHandler(handler)
   handler = { ...handler, method }
   fetchHandlers.push(handler)
   if (configuration.autoReplaceFetch) {

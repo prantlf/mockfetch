@@ -15,19 +15,19 @@ test('Type declarations for TypeScript', () => {
   setFetchConfiguration(fetchConfiguration)
 
   let fetchHandler: FetchHandler = mockFetch({
-    url: '//server/api/chat',
+    url: 'http://server/api/chat',
     response: { body: { answer: '42' } }
   })
   fetchHandler = mockFetch({
-    url: new RegExp('//server/api/chat'),
+    url: new RegExp('https?://server/api/chat'),
     async response(_request, _options) {
       return { body: { answer: '42' } }
     }
   })
-  const _mocks: boolean = willMockFetch('//server/api/chat')
+  const _mocks: boolean = willMockFetch('http://server/api/chat')
   const _mocked: boolean = includesMockedFetch(fetchHandler)
   const _unmocked: boolean = unmockFetch({
-    url: '//server/api/chat',
+    url: 'http://server/api/chat',
     method: 'GET'
   })
   const _unmockedAll: boolean = unmockAllFetches()

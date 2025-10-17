@@ -1,3 +1,4 @@
+import { nodeResolve } from '@rollup/plugin-node-resolve'
 import typescript from '@rollup/plugin-typescript'
 import { minify } from 'rollup-plugin-swc-minify'
 
@@ -33,6 +34,6 @@ export default [
         plugins: [minify()]
       }
     ],
-    plugins: [typescript()]
+    plugins: [nodeResolve(), typescript()]
   }
 ]
