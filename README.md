@@ -59,7 +59,6 @@ getFetchConfiguration()
 setFetchConfiguration({
   handleUnmockedRequests?,
   responseDelay?,
-  autoReplaceFetch?,
   logging?
 })
 
@@ -82,12 +81,10 @@ Configuration settings:
 |:-------------------------|-----------------|:------------|
 | `handleUnmockedRequests` | `'throw-error'` | change to `'pass-through'` to call the original `fetch` function, or to `'return-404'` to respond with the status 404, instead of throwing an error, if there's no matching `fetch` handler registered |
 | `responseDelay`          |      `0`        | a time duration to delay the mocked requests by default (in milliseconds) |
-| `autoReplaceFetch`       |    `true`       | set to `false` not to automatically replace and restore the global `fetch` as soon as the first `fetch` handlers is registered or the last one unregistered |
 | `logging`                |    `true`       | set to `false` to disable logging of succeeded and failed requests on the console |
 
 The defaults are optimised for fully mocked unit tests:
 * Unmocked `fetch` calls are disallowed.
-* Replacing an already registered mock with the same URL and method is not permitted.
 * Mocked responses are not delayed.
 * Console logging is enabled.
 
@@ -98,19 +95,22 @@ Mock parameters:
 | `url`           |    none     | a string convertible to [`URLPattern`] or a [`URLPattern`] instance to match the input URL |
 | `method`        |    `GET`    | a HTTP method to match the input method (case-insensitively) |
 | `responseDelay` | `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
-| `response`      |    none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) accepting a [`Request`] and returning an object or a [`Response`] |
+| `response`      |    none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) returning an object or a [`Response`] |
+
+When the first `fetch` handler mock is registered, the global `fetch` function will be replaced by the mocked one automatically. When the last `fetch` handler mock is unregistered, the global `fetch` function will be restored automatically.
 
 When looking for a `fetch` mock, the `fetch` handlers are evaluated in the order in which they were registered. The first one which matches the URL and method will be executed.
 
-Response callback arguments:
+Response callback arguments and result:
 
 | Name            | Description                                                       |
 |:----------------|:------------------------------------------------------------------|
 | `request`       | a [`Request`] instance created from the `fetch` handler arguments |
 | `options`       | an object with the properties below                               |
 | `options.match` | a result of the [`URLPattern`] execution on the input URL         |
-| `options.query` | a [`URLSearchParams`] instace created from the input URL query    |
-| `options.url`   | a [`URL`] instace created from the input URL                      |
+| `options.query` | a [`URLSearchParams`] instance created from the input URL query   |
+| `options.url`   | a [`URL`] instance created from the input URL                     |
+| result          | an object describing the response, or an instance of [`Response`] |
 
 Simplified object representing the response which can be used instead of a [`Response`] instance:
 

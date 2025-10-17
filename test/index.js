@@ -18,7 +18,6 @@ afterEach(() => {
   setFetchConfiguration({
     handleUnmockedRequests: 'throw-error',
     responseDelay: 0,
-    autoReplaceFetch: true,
     logging: true
   })
 })
@@ -28,10 +27,9 @@ test('optimises default configuration for fully mocked unit tests', () => {
   ok(typeof configuration === 'object' && configuration, 'configuration is not an object')
   strictEqual(configuration.handleUnmockedRequests, 'throw-error')
   strictEqual(configuration.responseDelay, 0)
-  strictEqual(configuration.autoReplaceFetch, true)
   strictEqual(configuration.logging, true)
   for (const key in configuration) {
-    if (!['handleUnmockedRequests', 'responseDelay', 'autoReplaceFetch', 'logging'].includes(key)) {
+    if (!['handleUnmockedRequests', 'responseDelay', 'logging'].includes(key)) {
       fail(`Unknown configuration key: "${key}"`)
     }
   }
@@ -77,22 +75,6 @@ test('replaces and restores global fetch automatically by default', () => {
   mockFetch(mockedFetch)
   unmockAllFetches()
   ok(!isFetchReplaced(), 'fetch found not restored')
-})
-
-test('does not replace and restore global fetch automatically if configured', () => {
-  setFetchConfiguration({ autoReplaceFetch: false })
-  const mockedFetch = {
-    url: 'http://server/api/chat',
-    response: {}
-  }
-  mockFetch(mockedFetch)
-  ok(!isFetchReplaced(), 'fetch found unexpectedly replaced')
-  replaceFetch()
-  unmockFetch(mockedFetch)
-  ok(isFetchReplaced(), 'fetch found unexpectedly restored')
-  mockFetch(mockedFetch)
-  unmockAllFetches()
-  ok(isFetchReplaced(), 'fetch found unexpectedly restored')
 })
 
 test('can replace global fetch explicitly', () => {

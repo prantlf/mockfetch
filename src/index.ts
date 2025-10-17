@@ -19,12 +19,6 @@ export interface FetchConfiguration {
   responseDelay: number
 
   /**
-   * set to `false` not to automatically replace and restore the global `fetch` as soon as the first `fetch` handlers is registered or the last one unregistered
-   * @default true
-   */
-  autoReplaceFetch: boolean
-
-  /**
    * set to `false` to disable logging of succeeded and failed requests on the console
    * @default true
    */
@@ -34,7 +28,6 @@ export interface FetchConfiguration {
 const configuration: FetchConfiguration = {
   handleUnmockedRequests: 'throw-error',
   responseDelay: 0,
-  autoReplaceFetch: true,
   logging: true
 }
 
@@ -49,7 +42,7 @@ export function getFetchConfiguration(): FetchConfiguration {
  * sets one or more `fetch` configuration parameters
  */
 export function setFetchConfiguration(options: FetchConfiguration) {
-  const { handleUnmockedRequests, responseDelay, autoReplaceFetch, logging } = options
+  const { handleUnmockedRequests, responseDelay, logging } = options
   if (handleUnmockedRequests) {
     const unmockedRequestHandling = ['pass-through', 'return-404', 'throw-error']
     if (!unmockedRequestHandling.includes(handleUnmockedRequests)) {
@@ -59,9 +52,6 @@ export function setFetchConfiguration(options: FetchConfiguration) {
   }
   if (responseDelay >= 0) {
     configuration.responseDelay = responseDelay
-  }
-  if (typeof autoReplaceFetch === 'boolean') {
-    configuration.autoReplaceFetch = autoReplaceFetch
   }
   if (typeof logging === 'boolean') {
     configuration.logging = logging
@@ -107,9 +97,23 @@ export interface FetchSpecification {
 
 const patternSymbol = Symbol('pattern')
 
+/**
+ * additional parameters for the response callback of a mocked `fetch` handler
+ */
 interface CallbackOptions {
-  match: URLPatternResult,
-  url: URL,
+  /**
+   * a result of the `URLPattern` execution on the input URL
+   */
+  match: URLPatternResult
+
+  /**
+   * a `URL` instance created from the input URL
+   */
+  url: URL
+
+  /**
+   * an object describing the response, or an instance of `Response`
+   */
   query: URLSearchParams
 }
 
@@ -125,7 +129,7 @@ export interface FetchHandler extends FetchSpecification {
   responseDelay?: number
 
   /**
-   * an object describing the response, or an instance of [`Response`], or a method (synchronous or asynchronous) accepting a [`Request`] and returning a [`Response`]
+   * an object describing the response, or an instance of [`Response`], or a method (synchronous or asynchronous) returning a [`Response`]
    */
   response: SimpleResponse | Response | ResponseCallback
 
@@ -178,9 +182,7 @@ export function includesMockedFetch(specification: FetchSpecification): boolean 
 export function mockFetch(handler: FetchHandler): FetchHandler {
   normalizeHandler(handler)
   fetchHandlers.push(handler)
-  if (configuration.autoReplaceFetch) {
-    replaceFetch()
-  }
+  replaceFetch()
   return handler
 }
 
@@ -192,7 +194,7 @@ export function unmockFetch(specification: FetchSpecification): void {
   const index = findFetchHandler(url, method as string)
   if (index >= 0) {
     fetchHandlers.splice(index, 1)
-    if (configuration.autoReplaceFetch) {
+    if (fetchHandlers.length === 0) {
       restoreFetch()
     }
   }
@@ -204,9 +206,7 @@ export function unmockFetch(specification: FetchSpecification): void {
 export function unmockAllFetches(): void {
   const { length } = fetchHandlers
   fetchHandlers.splice(0, length)
-  if (configuration.autoReplaceFetch) {
-    restoreFetch()
-  }
+  restoreFetch()
 }
 
 function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: URLPatternResult } {
