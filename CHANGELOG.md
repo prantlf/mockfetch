@@ -1,5 +1,45 @@
 # Changes
 
+## [0.2.0](https://github.com/prantlf/mockfetch/compare/v0.1.1...v0.2.0) (2025-10-17)
+
+### Features
+
+* Extract URL path and query parameters with RegExp groups ([1a369d3](https://github.com/prantlf/mockfetch/commit/1a369d388cddb90526a3db4e191f0f913f5a1480))
+* Support URLPattern for matching mocked URL ([a9259d4](https://github.com/prantlf/mockfetch/commit/a9259d4c1c42571572d7a07ce180310ca53c45a3))
+* Remove setting replaceMockedFetches ([cda5ad2](https://github.com/prantlf/mockfetch/commit/cda5ad26481bfdfcb4624a5540ebeb0999d401fd))
+* Remove matching mocked URL by RegExp ([fa9b482](https://github.com/prantlf/mockfetch/commit/fa9b482a4a2688ca8aef86f3e73d84507ff72784))
+* Provide URL and URLSearchParams objects in response callback options ([35838bf](https://github.com/prantlf/mockfetch/commit/35838bff4b0479c92b62151fa43694ed43b505b0))
+* Remove boolean result from unmockFetch, unmockAllFetches, replaceFetch and restoreFetch ([f33e84f](https://github.com/prantlf/mockfetch/commit/f33e84f33d5fc3f51c9adeb6dedf80b8a9ef7884))
+* Remove autoReplaceFetch from settings ([ec02e0a](https://github.com/prantlf/mockfetch/commit/ec02e0a77e4b1737168221315ba1694b3747546d))
+
+### BREAKING CHANGES
+
+Automatic replacing of the global `fetch` function and
+restoring its original value with the first registered mock and the last
+unregistered one cannot be disabled any more. But functions for handling
+it remain (`isFetchReplaced`, `replaceFetch` and `restoreFetch`).
+
+Functions `unmockFetch`, `unmockAllFetches`, `replaceFetch`
+and `restoreFetch` do not return anything now. The `boolean` result wasn't
+useful anyway. Functions `includesMockedFetch` and `isFetchReplaced` can
+be used to check the state of a mock or the global `fetch`.
+
+Use either a string acceptable for `URLPattern` or
+a `URLPattern` instance only. It's pactically as powerful as `RegExp`
+and includes additional features suitable for parsing URLs as routes.
+
+This shouldn't break anything, because this setting was
+used only to validate adding new mock `fetch` handlers, so that the same
+handler wouldn't be added twice. But the understanding of "the same" may
+vary. Does it mean the same URL pattern? Or a URL pattern matching the
+same URL? Better to remove it.
+
+The URL passed to `mockFetch` can't start without
+a scheme ('//...'). It'd be an invalid URL. `fetch` doesn't accept it
+either. If you want to register a mocked `fetch` handler independent
+on the scheme, start the URL string with 'http{s}:', or use a `RegExp`
+starting with /^https?:/.
+
 ## 0.1.1 (2025-10-16)
 
 Try publishing directly.
