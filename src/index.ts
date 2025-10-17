@@ -117,6 +117,12 @@ export interface FetchSpecification {
   method?: string
 }
 
+interface CallbackOptions {
+  match?: RegExpExecArray
+}
+
+type ResponseCallback = (request: Request, options: CallbackOptions) => Promise<SimpleResponse | Response>
+
 /**
  * provides specification for matching a mocked `fetch` call and the way how to handle its response
  */
@@ -129,7 +135,7 @@ export interface FetchHandler extends FetchSpecification {
   /**
    * an object describing the response, or an instance of [`Response`], or a method (synchronous or asynchronous) accepting a [`Request`] and returning a [`Response`]
    */
-  response: SimpleResponse | Response | ((request: Request) => Promise<SimpleResponse | Response>)
+  response: SimpleResponse | Response | ResponseCallback
 }
 
 const fetchHandlers: FetchHandler[] = []
@@ -216,19 +222,24 @@ export function unmockAllFetches(): boolean {
   return length > 0
 }
 
-function matchFetchHandler(url: string, method: string): FetchHandler | null {
+function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: RegExpExecArray } {
   for (const handler of fetchHandlers) {
     if (handler.method !== method) continue
     if (typeof handler.url === 'string') {
-      if(handler.url === url) return handler
+      if(handler.url === url) return { handler }
       if (handler.url.startsWith('//') && !url.startsWith('//')) {
         const urlWithoutScheme = url.replace(/^https?:/, '')
-        if (handler.url === urlWithoutScheme) return handler
+        if (handler.url === urlWithoutScheme) return { handler }
       }
     }
-    if (handler.url instanceof RegExp && handler.url.test(url)) return handler
+    if (handler.url instanceof RegExp) {
+      const match = handler.url.exec(url)
+      if (match) {
+        return { handler, match }
+      }
+    }
   }
-  return null
+  return {}
 }
 
 function normalizeRequestURL(url: RequestInfo | URL): { request: Request | undefined, url: string } {
@@ -260,7 +271,7 @@ export function willMockFetch(urlOrRequest: RequestInfo | URL, requestOptions?: 
   requestOptions = normalizeRequestOptions(requestOptions)
   const { method } = requestOptions
 
-  const handler = matchFetchHandler(url, method as string)
+  const { handler } = matchFetchHandler(url, method as string)
   return !!handler
 }
 
@@ -287,7 +298,7 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   requestOptions = normalizeRequestOptions(requestOptions)
   const { method } = requestOptions
 
-  const handler = matchFetchHandler(url, method as string)
+  const { handler, match } = matchFetchHandler(url, method as string)
   if (!handler) {
     switch (configuration.handleUnmockedRequests) {
       case 'pass-through':
@@ -309,7 +320,7 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   }
   try {
     const response = typeof handler.response === 'function'
-      ? await handler.response(request)
+      ? await handler.response(request, { match })
       : handler.response
     if (configuration.logging) {
       console.info(`MOCK ${method} ${url}`, request, response)

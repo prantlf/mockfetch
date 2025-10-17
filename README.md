@@ -70,7 +70,7 @@ replaceFetch()
 restoreFetch()
 ```
 
-Configuration parameters:
+Configuration settings:
 
 | Name                     | Default         | Description |
 |:-------------------------|-----------------|:------------|
@@ -97,23 +97,77 @@ Mock parameters:
 
 When looking for a `fetch` mock, the `fetch` handlers are evaluated in the order in which they were registered. The first one which matches the URL and method will be executed.
 
+Response callback arguments:
+
+| Name            | Description                                                     |
+|:----------------|:----------------------------------------------------------------|
+| `request`       | a `Request` instance created from the `fetch` handler arguments |
+| `options`       | an object with the properties below                             |
+| `options.match` | a result of the `RegExp` execution on the input URL             |
+
 ## Examples
 
-A successful mock of a `POST` request:
+A mock with URL path and query parameters:
 
 ```js
-import { mockFetch } from '@prantlf/mockfetch';
+import { mockFetch } from '@prantlf/mockfetch'
+
+mockFetch({
+  url: new RegExp('//server/api/users/(?<id>[^/?]+)(?<query>\\?.*)?'),
+  async response(request, { match }) {
+    try {
+      const queryParams = new URLSearchParams(match.groups.query)
+      const user = await users.get(match.groups.id, queryParams.get('full') != null)
+      return {
+        body: user
+      }
+    } catch (error) {
+      return {
+        status: 404,
+        body: { error: error.message }
+      }
+    }
+  }
+})
+```
+
+For comparison, the same mock registered with [`mockjax`]:
+
+```js
+const jquery = require('jquery')
+const mockjax = require('jquery-mockjax')(jquery, window)
+
+mockjax({
+  url: new RegExp('//server/api/users/([^/]+)(\\?.*)?'),
+  urlParams: ['id', 'query'],
+  response({ urlParams }) {
+    try {
+      const queryParams = new URLSearchParams(urlParams.query)
+      const user = users.getSync(urlParams.id, queryParams.get('full') != null)
+      this.responseText = user
+    } catch (error) {
+      this.status = 404
+      this.responseText = { error: error.message }
+    }
+  }
+})
+```
+
+A mock of a `POST` request:
+
+```js
+import { mockFetch } from '@prantlf/mockfetch'
 
 mockFetch({
   url: '//server/api/echo',
   method: 'POST',
   async response(request) {
-    const body = await request.json();
+    const body = await request.json()
     return {
       status: 200,
       body: { requested: body },
       headers: { 'Content-Type': 'application/json' }
-    };
+    }
   }
 })
 ```
@@ -127,11 +181,11 @@ const mockjax = require('jquery-mockjax')(jquery, window)
 mockjax({
   url: '//server/api/echo',
   type: 'POST',
-  response(settings) {
-    const body = JSON.parse(settings.data)
-    this.status = 200;
-    this.responseText = { requested: body };
-    this.contentType = 'application/json';
+  response({ data }) {
+    const body = JSON.parse(data)
+    this.status = 200
+    this.responseText = { requested: body }
+    this.contentType = 'application/json'
   }
 })
 ```
@@ -139,7 +193,7 @@ mockjax({
 A failing mock:
 
 ```js
-import { mockFetch } from '@prantlf/mockfetch';
+import { mockFetch } from '@prantlf/mockfetch'
 
 mockFetch({
   url: '//server/api/ping',
@@ -164,7 +218,7 @@ mockjax({
 A streaming mock:
 
 ```js
-import { mockFetch } from '@prantlf/mockfetch';
+import { mockFetch } from '@prantlf/mockfetch'
 
 mockFetch({
   url: '//server/api/chat',
@@ -182,7 +236,7 @@ mockFetch({
       start(controller) {
         const enqueueData = data => {
           const chunk = new TextEncoder().encode(`data: ${data}\n\n`)
-          controller.enqueue(chunk);
+          controller.enqueue(chunk)
         }
         messageInterval = setInterval(() => {
           enqueueData(JSON.stringify(messages[messageIndex]))

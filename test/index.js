@@ -108,47 +108,95 @@ test('can replace global fetch explicitly', () => {
   ok(!isFetchReplaced(), 'fetch found not restored')
 })
 
-test('can mock a fetch call with empty response by a URL string', async () => {
+test('can mock fetch call with empty response by string URL', async () => {
   setFetchConfiguration({ logging: false })
   const mockedFetch = {
-    url: '//server/api/chat',
+    url: '//server/api/ping',
     response: {}
   }
   mockFetch(mockedFetch)
-  const response = await fetch('http://server/api/chat')
+  const response = await fetch('http://server/api/ping')
   strictEqual(response.status, 200)
   const data = await response.bytes()
   strictEqual(data.length, 0)
 })
 
-test('can mock a fetch call with JSON response by a URL regex', async () => {
+test('can mock failure', async () => {
   setFetchConfiguration({ logging: false })
   const mockedFetch = {
-    url: new RegExp('https?://server/api/chat(?:\\?.*)?'),
-    method: 'post',
+    url: '//server/api/test',
+    method: 'GET',
     response: {
-      body: { answer: 42 }
+      status: 504
     }
   }
   mockFetch(mockedFetch)
-  const response = await fetch('http://server/api/chat?test', { method: 'post' })
-  strictEqual(response.status, 200)
-  const data = await response.json()
-  ok(typeof data === 'object' && data, 'data is not an object')
-  strictEqual(data.answer, 42)
+  const response = await fetch('http://server/api/test')
+  strictEqual(response.status, 504)
 })
 
-test('can mock a failing response by a function callback', async () => {
+test('can mock fetch call with JSON response by URL with parameters', async () => {
   setFetchConfiguration({ logging: false })
   const mockedFetch = {
-    url: '//server/api/chat',
-    response(_request) {
+    url: new RegExp('https?://server/api/users/(?<id>[^/?]+)(?<query>\\?.*)?'),
+    response(_request, { match }) {
+      const queryParams = new URLSearchParams(match.groups.query)
       return {
-        status: 504
+        body: { id: match.groups.id, full: queryParams.get('full') != null }
       }
     }
   }
   mockFetch(mockedFetch)
-  const response = await fetch('http://server/api/chat')
-  strictEqual(response.status, 504)
+  const response = await fetch('http://server/api/users/1?full')
+  strictEqual(response.status, 200)
+  const data = await response.json()
+  ok(typeof data === 'object' && data, 'data is not an object')
+  strictEqual(data.id, '1')
+  strictEqual(data.full, true)
+})
+
+test('can mock post fetch call with payload', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/chat',
+    method: 'post',
+    async response(request) {
+      const { question } = await request.json()
+      return {
+        body: { question, answer: 42 }
+      }
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch('http://server/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ question: 'What is the answer?' })
+  })
+  strictEqual(response.status, 200)
+  const data = await response.json()
+  ok(typeof data === 'object' && data, 'data is not an object')
+  strictEqual(data.question, 'What is the answer?')
+  strictEqual(data.answer, 42)
+})
+
+test('can mock fetch call with streaming response', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/stream',
+    response() {
+      const body = new ReadableStream({
+        start(controller) {
+          const data = new TextEncoder().encode('text')
+          controller.enqueue(data)
+          controller.close()
+        }
+      })
+      return { body }
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch('http://server/api/stream')
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, 'text')
 })

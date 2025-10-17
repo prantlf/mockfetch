@@ -14,9 +14,15 @@ test('Type declarations for TypeScript', () => {
   const fetchConfiguration: FetchConfiguration = getFetchConfiguration()
   setFetchConfiguration(fetchConfiguration)
 
-  const fetchHandler: FetchHandler = mockFetch({
+  let fetchHandler: FetchHandler = mockFetch({
     url: '//server/api/chat',
     response: { body: { answer: '42' } }
+  })
+  fetchHandler = mockFetch({
+    url: new RegExp('//server/api/chat'),
+    async response(_request, _options) {
+      return { body: { answer: '42' } }
+    }
   })
   const _mocks: boolean = willMockFetch('//server/api/chat')
   const _mocked: boolean = includesMockedFetch(fetchHandler)
