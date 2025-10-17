@@ -1,3 +1,4 @@
+import type { URLPattern } from '../dist/types/url-pattern'
 import type {
   FetchConfiguration, FetchHandler
 } from '../dist/index'
@@ -19,7 +20,8 @@ test('Type declarations for TypeScript', () => {
     response: { body: { answer: '42' } }
   })
   fetchHandler = mockFetch({
-    url: new RegExp('https?://server/api/chat'),
+    // @ts-expect-error
+    url: new URLPattern('http{s}?://server/api/chat'),
     async response(_request, _options) {
       return { body: { answer: '42' } }
     }

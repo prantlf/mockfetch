@@ -155,26 +155,6 @@ test('can mock fetch call with JSON response by URL with URLPattern parameters',
   strictEqual(data.full, true)
 })
 
-test('can mock fetch call with JSON response by URL with RegExp parameters', async () => {
-  setFetchConfiguration({ logging: false })
-  const mockedFetch = {
-    url: new RegExp('https?://server/api/users/(?<id>[^/?]+)(?<query>\\?.*)?'),
-    response(_request, { match }) {
-      const query = new URLSearchParams(match.groups.query)
-      return {
-        body: { id: match.groups.id, full: query.get('full') != null }
-      }
-    }
-  }
-  mockFetch(mockedFetch)
-  const response = await fetch('http://server/api/users/1?full')
-  strictEqual(response.status, 200)
-  const data = await response.json()
-  ok(typeof data === 'object' && data, 'data is not an object')
-  strictEqual(data.id, '1')
-  strictEqual(data.full, true)
-})
-
 test('can mock post fetch call with payload', async () => {
   setFetchConfiguration({ logging: false })
   const mockedFetch = {

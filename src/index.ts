@@ -98,9 +98,9 @@ interface SimpleResponse {
  */
 export interface FetchSpecification {
   /**
-   * a `'string'` convertible to [`URLPattern`] to match the input URL, or a `RegExp` for the ultimate flexibility
+   * a string convertible to `URLPattern` or a `URLPattern` instance to match the input URL
    */
-  url: string | URLPattern | RegExp
+  url: string | URLPattern
 
   /**
    * a HTTP method to match the input method (case-insensitively)
@@ -110,7 +110,7 @@ export interface FetchSpecification {
 }
 
 interface CallbackOptions {
-  match?: URLPatternResult | RegExpExecArray
+  match?: URLPatternResult
 }
 
 type ResponseCallback = (request: Request, options: CallbackOptions) => Promise<SimpleResponse | Response>
@@ -151,7 +151,7 @@ function normalizeHandler(handler: FetchHandler): FetchHandler {
   return handler
 }
 
-function findFetchHandler(url: string | URLPattern | RegExp, method: string): number {
+function findFetchHandler(url: string | URLPattern, method: string): number {
   for (let i = 0, l = fetchHandlers.length; i < l; ++i) {
     const handler = fetchHandlers[i]
     if (handler.method === method && handler.url === url) return i
@@ -209,24 +209,17 @@ export function unmockAllFetches(): boolean {
   return length > 0
 }
 
-function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: URLPatternResult | RegExpExecArray } {
+function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: URLPatternResult } {
   for (const handler of fetchHandlers) {
     if (handler.method !== method) continue
-    if (handler.url instanceof RegExp) {
-      const match = handler.url.exec(url)
-      if (match) {
-        return { handler, match }
-      }
-    } else {
+    // @ts-expect-error
+    const pattern = handler.url instanceof URLPattern
+      ? handler.url
       // @ts-expect-error
-      const pattern = handler.url instanceof URLPattern
-        ? handler.url
-        // @ts-expect-error
-        : new URLPattern(handler.url)
-      const match = pattern.exec(url)
-      if (match) {
-        return { handler, match }
-      }
+      : new URLPattern(handler.url)
+    const match = pattern.exec(url)
+    if (match) {
+      return { handler, match }
     }
   }
   return {}

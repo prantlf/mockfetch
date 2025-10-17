@@ -1,6 +1,6 @@
 # mockfetch
 
-Mock the [`fetch` function] in the simplest way, including streaming. The interface is similar to the venerable [`mockjax`].
+Mock the [`fetch` function] in the simplest way, including streaming. The interface is similar to the venerable [`mockjax`], just using modern features like [`URLPattern`].
 
 ## Synopsis
 
@@ -93,10 +93,10 @@ Mock parameters:
 
 | Name            |    Default   | Description |
 |:----------------|--------------|:------------|
-| `url`           |     none     | a `'string'` convertible to [`URLPattern`] to match the input URL, or a [`RegExp`] for the ultimate flexibility |
+| `url`           |     none     | a string convertible to [`URLPattern`] or a [`URLPattern`] instance to match the input URL |
 | `method`        |     `GET`    | a HTTP method to match the input method (case-insensitively) |
 | `responseDelay` |  `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
-| `response`      |     none     | an object describing the response, or an instance of [`Response`], or a method (synchronous or asynchronous) accepting a [`Request`] and returning a [`Response`] |
+| `response`      |     none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) accepting a [`Request`] and returning an object or a [`Response`] |
 
 When looking for a `fetch` mock, the `fetch` handlers are evaluated in the order in which they were registered. The first one which matches the URL and method will be executed.
 
@@ -106,11 +106,11 @@ Response callback arguments:
 |:----------------|:------------------------------------------------------------------|
 | `request`       | a [`Request`] instance created from the `fetch` handler arguments |
 | `options`       | an object with the properties below                               |
-| `options.match` | a result of the [`RegExp`] execution on the input URL             |
+| `options.match` | a result of the [`URLPattern`] execution on the input URL         |
 
 ## Examples
 
-A mock with URL path and query parameters as [`URLPattern`]:
+A mock with URL path and query parameters using the implicit [`URLPattern`]:
 
 ```js
 import { mockFetch } from '@prantlf/mockfetch'
@@ -121,30 +121,6 @@ mockFetch({
     try {
       const query = new URLSearchParams(new URL(request.url).search)
       const user = await users.get(match.pathname.groups.id, query.get('full') != null)
-      return {
-        body: user
-      }
-    } catch (error) {
-      return {
-        status: 404,
-        body: { error: error.message }
-      }
-    }
-  }
-})
-```
-
-A mock with URL path and query parameters as [`RegExp`]:
-
-```js
-import { mockFetch } from '@prantlf/mockfetch'
-
-mockFetch({
-  url: new RegExp('https?://server/api/users/(?<id>[^/?]+)(?<query>\\?.*)?'),
-  async response(request, { match }) {
-    try {
-      const query = new URLSearchParams(match.groups.query)
-      const user = await users.get(match.groups.id, query.get('full') != null)
       return {
         body: user
       }
@@ -217,13 +193,13 @@ mockjax({
 })
 ```
 
-A failing mock:
+A failing mock using an explicit [`URLPattern`] for the case-insensitive URL matching:
 
 ```js
 import { mockFetch } from '@prantlf/mockfetch'
 
 mockFetch({
-  url: 'http://server/api/ping',
+  url: new URLPattern('http://server/api/ping', { ignoreCase: true }),
   response: {
     status: 504
   }
@@ -237,7 +213,7 @@ const jquery = require('jquery')
 const mockjax = require('jquery-mockjax')(jquery, window)
 
 mockjax({
-  url: 'http://server/api/ping',
+  url: new RegExp('http://server/api/ping', 'i'),
   status: 504
 })
 ```
