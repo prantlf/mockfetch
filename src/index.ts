@@ -1,3 +1,5 @@
+import type { URLPattern, URLPatternResult } from './types/url-pattern'
+
 const originalFetch = globalThis.fetch
 
 /**
@@ -106,9 +108,9 @@ interface SimpleResponse {
  */
 export interface FetchSpecification {
   /**
-   * a `'string'` to match exactly the input URL (the scheme may be omitted, for example: `'//server/api/ping'`), or a `RegExp` for the ultimate flexibility
+   * a `'string'` convertible to [`URLPattern`] to match the input URL, or a `RegExp` for the ultimate flexibility
    */
-  url: string | RegExp
+  url: string | URLPattern | RegExp
 
   /**
    * a HTTP method to match the input method (case-insensitively)
@@ -118,7 +120,7 @@ export interface FetchSpecification {
 }
 
 interface CallbackOptions {
-  match?: RegExpExecArray
+  match?: URLPatternResult | RegExpExecArray
 }
 
 type ResponseCallback = (request: Request, options: CallbackOptions) => Promise<SimpleResponse | Response>
@@ -159,7 +161,7 @@ function normalizeHandler(handler: FetchHandler): FetchHandler {
   return handler
 }
 
-function findFetchHandler(url: string | RegExp, method: string): number {
+function findFetchHandler(url: string | URLPattern | RegExp, method: string): number {
   for (let i = 0, l = fetchHandlers.length; i < l; ++i) {
     const handler = fetchHandlers[i]
     if (handler.method === method && handler.url === url) return i
@@ -222,18 +224,21 @@ export function unmockAllFetches(): boolean {
   return length > 0
 }
 
-function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: RegExpExecArray } {
+function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: URLPatternResult | RegExpExecArray } {
   for (const handler of fetchHandlers) {
     if (handler.method !== method) continue
-    if (typeof handler.url === 'string') {
-      if(handler.url === url) return { handler }
-      if (handler.url.startsWith('//') && !url.startsWith('//')) {
-        const urlWithoutScheme = url.replace(/^https?:/, '')
-        if (handler.url === urlWithoutScheme) return { handler }
-      }
-    }
     if (handler.url instanceof RegExp) {
       const match = handler.url.exec(url)
+      if (match) {
+        return { handler, match }
+      }
+    } else {
+      // @ts-expect-error
+      const pattern = handler.url instanceof URLPattern
+        ? handler.url
+        // @ts-expect-error
+        : new URLPattern(handler.url)
+      const match = pattern.exec(url)
       if (match) {
         return { handler, match }
       }
