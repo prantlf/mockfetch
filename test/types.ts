@@ -1,4 +1,3 @@
-import type { URLPattern } from '../dist/types/url-pattern'
 import type {
   FetchConfiguration, FetchHandler
 } from '../dist/index'

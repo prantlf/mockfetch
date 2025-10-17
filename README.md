@@ -1,6 +1,6 @@
 # mockfetch
 
-Mock the [`fetch` function] in the simplest way, including streaming. The interface is similar to the venerable [`mockjax`], just using modern features like [`URLPattern`].
+Mock the [`fetch` function] in the simplest way, including streaming. The interface is similar to the venerable [`mockjax`], just using modern features like [`URL`], [`URLSearchParams`] and [`URLPattern`].
 
 ## Synopsis
 
@@ -40,11 +40,13 @@ Or imported locally on a HTML page from the CDN, just the needed named exports:
 </script>
 ```
 
-Make sure, that you use it with a JavaScript VM which supports the [Fetch API] and the [URL Pattern API]. Otherwise you can apply polyfills, for example:
+Make sure, that you use it with a JavaScript VM which supports the [Fetch API], [URL Pattern API], [`URL`] and [`URLSearchParams`]. Otherwise you can apply polyfills, for example:
 
 ```js
 if (!globalThis.fetch) await import('whatwg-fetch')
+if (!globalThis.URL) await import('url-polyfill')
 if (!globalThis.URLPattern) await import('urlpattern-polyfill')
+if (!globalThis.URLSearchParams) await import('url-search-params-polyfill')
 ```
 
 ## API
@@ -91,12 +93,12 @@ The defaults are optimised for fully mocked unit tests:
 
 Mock parameters:
 
-| Name            |    Default   | Description |
-|:----------------|--------------|:------------|
-| `url`           |     none     | a string convertible to [`URLPattern`] or a [`URLPattern`] instance to match the input URL |
-| `method`        |     `GET`    | a HTTP method to match the input method (case-insensitively) |
-| `responseDelay` |  `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
-| `response`      |     none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) accepting a [`Request`] and returning an object or a [`Response`] |
+| Name            |   Default   | Description |
+|:----------------|-------------|:------------|
+| `url`           |    none     | a string convertible to [`URLPattern`] or a [`URLPattern`] instance to match the input URL |
+| `method`        |    `GET`    | a HTTP method to match the input method (case-insensitively) |
+| `responseDelay` | `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
+| `response`      |    none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) accepting a [`Request`] and returning an object or a [`Response`] |
 
 When looking for a `fetch` mock, the `fetch` handlers are evaluated in the order in which they were registered. The first one which matches the URL and method will be executed.
 
@@ -107,23 +109,32 @@ Response callback arguments:
 | `request`       | a [`Request`] instance created from the `fetch` handler arguments |
 | `options`       | an object with the properties below                               |
 | `options.match` | a result of the [`URLPattern`] execution on the input URL         |
+| `options.query` | a [`URLSearchParams`] instace created from the input URL query    |
+| `options.url`   | a [`URL`] instace created from the input URL                      |
+
+Simplified object representing the response which can be used instead of a [`Response`] instance:
+
+| Name      |   Default   | Description |
+|:----------|-------------|:------------|
+| `status`  |   `200`     | a HTTP status code for the response |
+| `headers` |    none     | a Headers object, an object literal, or an array of two-item arrays to set request's headers |
+| `body`    | `undefined` | a response body, either an object or a value accepted hy the [`Response`] constructor |
+
+If the `body` property contains a plain object, it'll be stringified and the content type `application/json` will be added to the response headers automatically.
 
 ## Examples
 
-A mock with URL path and query parameters using the implicit [`URLPattern`]:
+A mock with URL path and query parameters using an implicit [`URLPattern`]:
 
 ```js
 import { mockFetch } from '@prantlf/mockfetch'
 
 mockFetch({
   url: 'http{s}?://server/api/users/:id',
-  async response(request, { match }) {
+  async response(request, { match, query }) {
     try {
-      const query = new URLSearchParams(new URL(request.url).search)
       const user = await users.get(match.pathname.groups.id, query.get('full') != null)
-      return {
-        body: user
-      }
+      return { body: user }
     } catch (error) {
       return {
         status: 404,
@@ -200,9 +211,7 @@ import { mockFetch } from '@prantlf/mockfetch'
 
 mockFetch({
   url: new URLPattern('http://server/api/ping', { ignoreCase: true }),
-  response: {
-    status: 504
-  }
+  response: { status: 504 }
 })
 ```
 
@@ -232,7 +241,6 @@ mockFetch({
       { delta: { ... } },
       { delta: { ... } }
     ]
-
     let messageIndex = 0
     let messageInterval
     const body = new ReadableStream({
@@ -256,7 +264,6 @@ mockFetch({
         }
       }
     })
-
     return {
       body,
       headers: { 'Content-Type': 'text/event-stream' }
@@ -283,3 +290,5 @@ Licensed under the MIT license.
 [`Response`]: https://developer.mozilla.org/en-US/docs/Web/API/Response
 [URL Pattern API]: https://developer.mozilla.org/en-US/docs/Web/API/URL_Pattern_API
 [`URLPattern`]: https://developer.mozilla.org/en-US/docs/Web/API/URLPattern
+[`URLSearchParams`]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
+[`URL`]: https://developer.mozilla.org/en-US/docs/Web/API/URL

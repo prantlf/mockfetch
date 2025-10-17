@@ -69,18 +69,11 @@ export function setFetchConfiguration(options: FetchConfiguration) {
 }
 
 /**
- * value of the body to return in the response
- */
-type Body = null | string | object | ArrayBuffer | Blob | DataView | File | FormData |
-  URLSearchParams | ReadableStream | Int8Array | Uint8Array | Uint8ClampedArray |
-  Int16Array | Uint16Array | Int32Array | Uint32Array | /* Float16Array | */
-  Float32Array | Float64Array /* | BigInt64Array | BigUint64Array */
-
-/**
  * object literal to specify the response content in a simplified way
  */
 interface SimpleResponse {
   /**
+   * a HTTP status code for the response
    * @default 200
    */
   status?: number
@@ -90,7 +83,10 @@ interface SimpleResponse {
    */
   headers?: Record<string, string>
 
-  body?: Body
+  /**
+   * a response body, either an object or a value accepted hy the [`Response`] constructor
+   */
+  body?: BodyInit | object
 }
 
 /**
@@ -109,8 +105,12 @@ export interface FetchSpecification {
   method?: string
 }
 
+const patternSymbol = Symbol('pattern')
+
 interface CallbackOptions {
-  match?: URLPatternResult
+  match: URLPatternResult,
+  url: URL,
+  query: URLSearchParams
 }
 
 type ResponseCallback = (request: Request, options: CallbackOptions) => Promise<SimpleResponse | Response>
@@ -128,6 +128,8 @@ export interface FetchHandler extends FetchSpecification {
    * an object describing the response, or an instance of [`Response`], or a method (synchronous or asynchronous) accepting a [`Request`] and returning a [`Response`]
    */
   response: SimpleResponse | Response | ResponseCallback
+
+  [patternSymbol]?: URLPattern
 }
 
 const fetchHandlers: FetchHandler[] = []
@@ -146,15 +148,20 @@ function normalizeSpecification(specification: FetchSpecification): FetchSpecifi
 
 function normalizeHandler(handler: FetchHandler): FetchHandler {
   handler = normalizeSpecification(handler) as FetchHandler
-  const { response } = handler
+  const { url, response } = handler
   if (!response) throw Error('Mocked fetch is missing "response"')
+  // @ts-expect-error
+  handler[patternSymbol] = url instanceof URLPattern
+    ? url
+    // @ts-expect-error
+    : new URLPattern(url)
   return handler
 }
 
 function findFetchHandler(url: string | URLPattern, method: string): number {
   for (let i = 0, l = fetchHandlers.length; i < l; ++i) {
     const handler = fetchHandlers[i]
-    if (handler.method === method && handler.url === url) return i
+    if (handler.url === url && handler.method === method) return i
   }
   return -1
 }
@@ -175,7 +182,7 @@ export function mockFetch(handler: FetchHandler): FetchHandler {
   const { method } = normalizeHandler(handler)
   handler = { ...handler, method }
   fetchHandlers.push(handler)
-  if (configuration.autoReplaceFetch) {
+  if (configuration.autoReplaceFetch && !isFetchReplaced()) {
     replaceFetch()
   }
   return handler
@@ -189,7 +196,7 @@ export function unmockFetch(specification: FetchSpecification): boolean {
   const index = findFetchHandler(url, method as string)
   if (index >= 0) {
     fetchHandlers.splice(index, 1)
-    if (configuration.autoReplaceFetch && fetchHandlers.length === 0) {
+    if (fetchHandlers.length === 0 && configuration.autoReplaceFetch && isFetchReplaced()) {
       restoreFetch()
     }
     return true
@@ -202,22 +209,20 @@ export function unmockFetch(specification: FetchSpecification): boolean {
  */
 export function unmockAllFetches(): boolean {
   const { length } = fetchHandlers
-  fetchHandlers.splice(0, length)
-  if (configuration.autoReplaceFetch) {
-    restoreFetch();
+  if (length > 0) {
+    fetchHandlers.splice(0, length)
+    if (configuration.autoReplaceFetch && isFetchReplaced()) {
+      restoreFetch()
+    }
+    return true
   }
-  return length > 0
+  return false
 }
 
 function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: URLPatternResult } {
   for (const handler of fetchHandlers) {
     if (handler.method !== method) continue
-    // @ts-expect-error
-    const pattern = handler.url instanceof URLPattern
-      ? handler.url
-      // @ts-expect-error
-      : new URLPattern(handler.url)
-    const match = pattern.exec(url)
+    const match = (handler[patternSymbol] as URLPattern).exec(url)
     if (match) {
       return { handler, match }
     }
@@ -250,7 +255,7 @@ function normalizeRequestOptions(requestOptions?: RequestInit): RequestInit {
  * checks if a `fetch` call with the provided parameter will be mocked
  */
 export function willMockFetch(urlOrRequest: RequestInfo | URL, requestOptions?: RequestInit): boolean {
-  const { url } = normalizeRequestURL(urlOrRequest);
+  const { url } = normalizeRequestURL(urlOrRequest)
   requestOptions = normalizeRequestOptions(requestOptions)
   const { method } = requestOptions
 
@@ -258,13 +263,13 @@ export function willMockFetch(urlOrRequest: RequestInfo | URL, requestOptions?: 
   return !!handler
 }
 
-function isSupportedBodyType(body: Body | undefined): boolean {
-  if (body == null) return true
+function isSupportedBodyType(body?: BodyInit | object): boolean {
+  if (body == null || typeof body === 'string') return true
   const supportedBodyTypes = [
-    ArrayBuffer, Blob, DataView, File, FormData, URLSearchParams, ReadableStream,
+    ArrayBuffer, Blob, DataView, File, FormData, URLSearchParams,
     Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array,
     Int32Array, Uint32Array, /* Float16Array, */ Float32Array, Float64Array,
-    BigInt64Array, BigUint64Array
+    BigInt64Array, BigUint64Array, ReadableStream
   ]
   for (const type of supportedBodyTypes) {
     if (body instanceof type) return true
@@ -276,8 +281,41 @@ function waitForDelay(timeDuration: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, timeDuration))
 }
 
+function optionallyAddJSONContentType(responseOptions: ResponseInit) {
+  const { headers } = responseOptions
+  if (!headers) {
+    responseOptions.headers = { 'Content-Type': 'application/json' }
+  } else if (headers instanceof Headers) {
+    if (headers.get('Content-Type') == null) {
+      headers.set('Content-Type', 'application/json')
+    }
+  } else if (Array.isArray(headers)) {
+    let hasContentType = false
+    for (const [name] of headers) {
+      if (name.toLowerCase() === 'content-type') {
+        hasContentType = true
+        break
+      }
+    }
+    if (!hasContentType) {
+      headers.push(['Content-Type', 'application/json'])
+    }
+  } else {
+    let hasContentType = false
+    for (const name in headers) {
+      if (name.toLowerCase() === 'content-type') {
+        hasContentType = true
+        break
+      }
+    }
+    if (!hasContentType) {
+      headers['Content-Type'] = 'application/json'
+    }
+  }
+}
+
 async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: RequestInit): Promise<Response> {
-  let { request, url } = normalizeRequestURL(urlOrRequest);
+  let { request, url } = normalizeRequestURL(urlOrRequest)
   requestOptions = normalizeRequestOptions(requestOptions)
   const { method } = requestOptions
 
@@ -302,9 +340,16 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
     request = new Request(url, requestOptions)
   }
   try {
-    const response = typeof handler.response === 'function'
-      ? await handler.response(request, { match })
-      : handler.response
+    let { response } = handler
+    if (typeof response === 'function') {
+      const urlObject = new URL(url)
+      const matchOptions = {
+        match: match as URLPatternResult,
+        url: urlObject,
+        query: new URLSearchParams(urlObject.search)
+      }
+      response = await response(request, matchOptions)
+    }
     if (configuration.logging) {
       console.info(`MOCK ${method} ${url}`, request, response)
     }
@@ -314,10 +359,7 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
     let { body, ...responseOptions } = response
     if (!isSupportedBodyType(body)) {
       body = JSON.stringify(body)
-      responseOptions.headers = {
-        'Content-Type': 'application/json',
-        ...responseOptions.headers
-      }
+      optionallyAddJSONContentType(responseOptions)
     }
     return new Response(body as BodyInit, responseOptions)
   } catch (error) {

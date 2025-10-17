@@ -139,8 +139,7 @@ test('can mock fetch call with JSON response by URL with URLPattern parameters',
   setFetchConfiguration({ logging: false })
   const mockedFetch = {
     url: new URLPattern('http{s}?://server/api/users/:id'),
-    response(request, { match }) {
-      const query = new URLSearchParams(new URL(request.url).search)
+    response(_request, { match, query }) {
       return {
         body: { id: match.pathname.groups.id, full: query.get('full') != null }
       }
