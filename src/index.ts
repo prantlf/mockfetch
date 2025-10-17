@@ -134,28 +134,25 @@ export interface FetchHandler extends FetchSpecification {
 
 const fetchHandlers: FetchHandler[] = []
 
+function normalizeMethod(method?: string): string {
+  return method ? method.toUpperCase() : 'GET'
+}
+
 function normalizeSpecification(specification: FetchSpecification): FetchSpecification {
-  let { url, method } = specification
+  const { url, method } = specification
   if (!url) throw Error('Mocked fetch is missing "url"')
-  if (method) {
-    method = method.toUpperCase()
-  } else {
-    method = 'GET'
-  }
-  specification.method = method
+  specification.method = normalizeMethod(method)
   return specification
 }
 
-function normalizeHandler(handler: FetchHandler): FetchHandler {
-  handler = normalizeSpecification(handler) as FetchHandler
-  const { url, response } = handler
+function normalizeHandler(handler: FetchHandler): void {
+  const { url, response } = normalizeSpecification(handler) as FetchHandler
   if (!response) throw Error('Mocked fetch is missing "response"')
   // @ts-expect-error
   handler[patternSymbol] = url instanceof URLPattern
     ? url
     // @ts-expect-error
     : new URLPattern(url)
-  return handler
 }
 
 function findFetchHandler(url: string | URLPattern, method: string): number {
@@ -179,10 +176,9 @@ export function includesMockedFetch(specification: FetchSpecification): boolean 
  * registers a mock for a `fetch` call
  */
 export function mockFetch(handler: FetchHandler): FetchHandler {
-  const { method } = normalizeHandler(handler)
-  handler = { ...handler, method }
+  normalizeHandler(handler)
   fetchHandlers.push(handler)
-  if (configuration.autoReplaceFetch && !isFetchReplaced()) {
+  if (configuration.autoReplaceFetch) {
     replaceFetch()
   }
   return handler
@@ -191,32 +187,26 @@ export function mockFetch(handler: FetchHandler): FetchHandler {
 /**
  * unregisters a mock for a `fetch` call
  */
-export function unmockFetch(specification: FetchSpecification): boolean {
+export function unmockFetch(specification: FetchSpecification): void {
   const { url, method } = normalizeSpecification(specification)
   const index = findFetchHandler(url, method as string)
   if (index >= 0) {
     fetchHandlers.splice(index, 1)
-    if (fetchHandlers.length === 0 && configuration.autoReplaceFetch && isFetchReplaced()) {
+    if (configuration.autoReplaceFetch) {
       restoreFetch()
     }
-    return true
   }
-  return false
 }
 
 /**
  * unregisters all `fetch` call mocks
  */
-export function unmockAllFetches(): boolean {
+export function unmockAllFetches(): void {
   const { length } = fetchHandlers
-  if (length > 0) {
-    fetchHandlers.splice(0, length)
-    if (configuration.autoReplaceFetch && isFetchReplaced()) {
-      restoreFetch()
-    }
-    return true
+  fetchHandlers.splice(0, length)
+  if (configuration.autoReplaceFetch) {
+    restoreFetch()
   }
-  return false
 }
 
 function matchFetchHandler(url: string, method: string): { handler?: FetchHandler, match?: URLPatternResult } {
@@ -243,11 +233,7 @@ function normalizeRequestURL(url: RequestInfo | URL): { request: Request | undef
 
 function normalizeRequestOptions(requestOptions?: RequestInit): RequestInit {
   let method = requestOptions?.method
-  if (method) {
-    method = method.toUpperCase()
-  } else {
-    method = 'GET'
-  }
+  method = normalizeMethod(method)
   return { ...requestOptions, method }
 }
 
@@ -263,7 +249,7 @@ export function willMockFetch(urlOrRequest: RequestInfo | URL, requestOptions?: 
   return !!handler
 }
 
-function isSupportedBodyType(body?: BodyInit | object): boolean {
+function canConstructResponseWith(body?: BodyInit | object): boolean {
   if (body == null || typeof body === 'string') return true
   const supportedBodyTypes = [
     ArrayBuffer, Blob, DataView, File, FormData, URLSearchParams,
@@ -327,14 +313,11 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
       case 'throw-error':
         throw Error(`Fetch not mocked: ${method} ${url}`)
       case 'return-404':
-        return Promise.resolve(new Response(null, { status: 404 }))
+        return new Response(null, { status: 404 })
     }
   }
 
-  const responseDelay = handler.responseDelay ?? configuration.responseDelay
-  if (responseDelay > 0) {
-    await waitForDelay(configuration.responseDelay)
-  }
+  await waitForDelay(handler.responseDelay ?? configuration.responseDelay)
 
   if (!request) {
     request = new Request(url, requestOptions)
@@ -353,11 +336,9 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
     if (configuration.logging) {
       console.info(`MOCK ${method} ${url}`, request, response)
     }
-    if (response instanceof Response) {
-      return response
-    }
+    if (response instanceof Response) return response
     let { body, ...responseOptions } = response
-    if (!isSupportedBodyType(body)) {
+    if (!canConstructResponseWith(body)) {
       body = JSON.stringify(body)
       optionallyAddJSONContentType(responseOptions)
     }
@@ -380,17 +361,13 @@ export function isFetchReplaced(): boolean {
 /**
  * replaces the global `fetch` function by the mock-able one
  */
-export function replaceFetch(): boolean {
-  const replaced = isFetchReplaced()
+export function replaceFetch(): void {
   globalThis.fetch = mockedFetch
-  return !replaced
 }
 
 /**
  * restores the original global `fetch` function
  */
-export function restoreFetch(): boolean {
-  const replaced = isFetchReplaced()
+export function restoreFetch(): void {
   globalThis.fetch = originalFetch
-  return replaced
 }

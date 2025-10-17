@@ -58,12 +58,11 @@ test('can register and unregister fetch handlers', () => {
     'fetch found not mocked with an explicit method')
   ok(includesMockedFetch({ url: 'http://server/api/chat', method: 'get' }),
     'fetch found not mocked with an lowercase method')
-  ok(unmockFetch(mockedFetch), 'fetch not unmocked')
-  ok(!unmockFetch(mockedFetch), 'fetch unexpectedly unmocked')
+  unmockFetch(mockedFetch)
   ok(!includesMockedFetch(mockedFetch), 'fetch found still mocked')
   mockFetch(mockedFetch)
-  ok(unmockAllFetches(), 'no fetches unmocked')
-  ok(!unmockAllFetches(), 'some fetches still unmocked')
+  unmockAllFetches()
+  ok(!includesMockedFetch(mockedFetch), 'fetch found still mocked')
 })
 
 test('replaces and restores global fetch automatically by default', () => {
@@ -98,13 +97,11 @@ test('does not replace and restore global fetch automatically if configured', ()
 
 test('can replace global fetch explicitly', () => {
   ok(!isFetchReplaced(), 'fetch found already replaced')
-  ok(replaceFetch(), 'fetch not replaced')
+  replaceFetch()
   notStrictEqual(originalFetch, globalThis.fetch)
-  ok(!replaceFetch(), 'fetch unexpectedly replaced')
   ok(isFetchReplaced(), 'fetch found not replaced')
-  ok(restoreFetch(), 'fetch not restored')
+  restoreFetch()
   strictEqual(originalFetch, globalThis.fetch)
-  ok(!restoreFetch(), 'fetch unexpectedly restored')
   ok(!isFetchReplaced(), 'fetch found not restored')
 })
 

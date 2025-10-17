@@ -27,13 +27,13 @@ test('Type declarations for TypeScript', () => {
   })
   const _mocks: boolean = willMockFetch('http://server/api/chat')
   const _mocked: boolean = includesMockedFetch(fetchHandler)
-  const _unmocked: boolean = unmockFetch({
+  unmockFetch({
     url: 'http://server/api/chat',
     method: 'GET'
   })
-  const _unmockedAll: boolean = unmockAllFetches()
+  unmockAllFetches()
 
-  let _replaced: boolean = isFetchReplaced()
-  _replaced = replaceFetch()
-  _replaced = restoreFetch()
+  const _replaced: boolean = isFetchReplaced()
+  replaceFetch()
+  restoreFetch()
 })
