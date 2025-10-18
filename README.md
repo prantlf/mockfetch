@@ -87,17 +87,17 @@ willMockFetch(urlOrRequest: RequestInfo | URL, requestOptions?: RequestInit): bo
 
 // registers a mock for a `fetch` call
 mockFetch({
-  url: string | URLPattern,
+  url: string | URL | URLPattern,
   method?: string,
   responseDelay?: number,
   response: Response | SimpleResponse | ResponseCallback
 })
 
 // checks if a mocked `fetch` call matching the given specification has been already registered
-includesMockedFetch({ url: string | URLPattern, method?: string }): boolean
+includesMockedFetch({ url: string | URL | URLPattern, method?: string }): boolean
 
 // unregisters a mock for a `fetch` call
-unmockFetch({ url: string | URLPattern, method?: string }): void
+unmockFetch({ url: string | URL | URLPattern, method?: string }): void
 
 // unregisters all `fetch` call mocks
 unmockAllFetches(): void
@@ -107,7 +107,7 @@ Mock handler parameters, those without a default are mandatory:
 
 | Name            |   Default   | Description |
 |:----------------|-------------|:------------|
-| `url`           |    none     | a string convertible to [`URLPattern`] or a [`URLPattern`] instance to match the input URL |
+| `url`           |    none     | a string convertible to [`URLPattern`] or a [`URL`] or [`URLPattern`] instance to match the input URL |
 | `method`        |    `GET`    | a HTTP method to match the input method (case-insensitively) |
 | `responseDelay` | `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
 | `response`      |    none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) returning an object or a [`Response`] |

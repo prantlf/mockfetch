@@ -84,9 +84,9 @@ export interface SimpleResponse {
  */
 export interface FetchSpecification {
   /**
-   * a string convertible to `URLPattern` or a `URLPattern` instance to match the input URL
+   * a string convertible to `URLPattern` or a `URL` or `URLPattern` instance to match the input URL
    */
-  url: string | URLPattern
+  url: string | URL | URLPattern
 
   /**
    * a HTTP method to match the input method (case-insensitively)
@@ -148,6 +148,9 @@ function normalizeMethod(method?: string): string {
 function normalizeSpecification(specification: FetchSpecification): FetchSpecification {
   const { url, method } = specification
   if (!url) throw Error('Mocked fetch is missing "url"')
+  if (url instanceof URL) {
+    specification.url = url.href
+  }
   specification.method = normalizeMethod(method)
   return specification
 }
@@ -175,7 +178,7 @@ function findFetchHandler(url: string | URLPattern, method: string): number {
  */
 export function includesMockedFetch(specification: FetchSpecification): boolean {
   const { url, method } = normalizeSpecification(specification)
-  const index = findFetchHandler(url, method as string)
+  const index = findFetchHandler(url as string | URLPattern, method as string)
   return index >= 0
 }
 
@@ -194,7 +197,7 @@ export function mockFetch(handler: FetchHandler): FetchHandler {
  */
 export function unmockFetch(specification: FetchSpecification): void {
   const { url, method } = normalizeSpecification(specification)
-  const index = findFetchHandler(url, method as string)
+  const index = findFetchHandler(url as string | URLPattern, method as string)
   if (index >= 0) {
     fetchHandlers.splice(index, 1)
     if (fetchHandlers.length === 0) {
@@ -349,7 +352,9 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   let logOutput: string | object | undefined
   try {
     if (typeof response === 'function') {
-      const urlObject = new URL(url)
+      const urlObject = urlOrRequest instanceof URL
+        ? urlOrRequest
+        : new URL(url)
       const matchOptions = {
         match: match as URLPatternResult,
         url: urlObject,
