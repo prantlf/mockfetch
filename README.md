@@ -2,6 +2,19 @@
 
 Mock the [`fetch` function] in the simplest way, including streaming. The interface is similar to the venerable [`mockjax`], just using modern features like [`URL`], [`URLSearchParams`] and [`URLPattern`].
 
+* Distributes ESM, CJS and UBM bundles.
+* Written in TypeScript, exports types.
+* Small size, 4 KB minified.
+* No dependencies.
+
+## Table of contents
+
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Mocking and Unmocking](#mocking-and-unmocking)
+- [Global Fetch](#global-fetch)
+- [Examples](#examples)
+
 ## Synopsis
 
 ```js
@@ -23,7 +36,7 @@ const { result } = await response.json() // 42
 This package is usually installed as a local development dependency:
 
 ```sh
-$ npm i -D @mockfetch/mockfetch
+npm i -D @mockfetch/mockfetch
 ```
 
 Or loaded on a HTML page from the CDN, declaring a global object `mockfetch` with all named exports:
