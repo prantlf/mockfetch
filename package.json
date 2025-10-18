@@ -41,7 +41,8 @@
     "test:cjs": "node test/index.cjs",
     "test:ts": "tsc --noEmit test/types.ts",
     "test:js": "node test",
-    "test": "npm run test:cjs && npm run test:ts && npm run test:js"
+    "test": "npm run test:cjs && npm run test:ts && npm run test:js",
+    "start": "python3 -m http.server"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",

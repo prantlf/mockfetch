@@ -14,31 +14,15 @@
 
 ### BREAKING CHANGES
 
-Automatic replacing of the global `fetch` function and
-restoring its original value with the first registered mock and the last
-unregistered one cannot be disabled any more. But functions for handling
-it remain (`isFetchReplaced`, `replaceFetch` and `restoreFetch`).
+Automatic replacing of the global `fetch` function and restoring its original value with the first registered mock and the last unregistered one cannot be disabled any more. But functions for handling it remain (`isFetchReplaced`, `replaceFetch` and `restoreFetch`).
 
-Functions `unmockFetch`, `unmockAllFetches`, `replaceFetch`
-and `restoreFetch` do not return anything now. The `boolean` result wasn't
-useful anyway. Functions `includesMockedFetch` and `isFetchReplaced` can
-be used to check the state of a mock or the global `fetch`.
+Functions `unmockFetch`, `unmockAllFetches`, `replaceFetch` and `restoreFetch` do not return anything now. The `boolean` result wasn't useful anyway. Functions `includesMockedFetch` and `isFetchReplaced` can be used to check the state of a mock or the global `fetch`.
 
-Use either a string acceptable for `URLPattern` or
-a `URLPattern` instance only. It's pactically as powerful as `RegExp`
-and includes additional features suitable for parsing URLs as routes.
+Use either a string acceptable for `URLPattern` or a `URLPattern` instance only. It's practically as powerful as `RegExp` and includes additional features suitable for parsing URLs as routes.
 
-This shouldn't break anything, because this setting was
-used only to validate adding new mock `fetch` handlers, so that the same
-handler wouldn't be added twice. But the understanding of "the same" may
-vary. Does it mean the same URL pattern? Or a URL pattern matching the
-same URL? Better to remove it.
+This shouldn't break anything, because this setting was used only to validate adding new mock `fetch` handlers, so that the same handler wouldn't be added twice. But the understanding of "the same" may vary. Does it mean the same URL pattern? Or a URL pattern matching the same URL? Better to remove it.
 
-The URL passed to `mockFetch` can't start without
-a scheme ('//...'). It'd be an invalid URL. `fetch` doesn't accept it
-either. If you want to register a mocked `fetch` handler independent
-on the scheme, start the URL string with 'http{s}:', or use a `RegExp`
-starting with /^https?:/.
+The URL passed to `mockFetch` can't start without a scheme (`'//...'`). It'd be an invalid URL. `fetch` doesn't accept it either. If you want to register a mocked `fetch` handler independent on the scheme, start the URL string with `'http{s}:'`, or use a `RegExp` starting with `/^https?:/`.
 
 ## 0.1.1 (2025-10-16)
 

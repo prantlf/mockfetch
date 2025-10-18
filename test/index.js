@@ -119,8 +119,10 @@ test('can mock fetch call with JSON response by URL with URLPattern parameters',
   const mockedFetch = {
     url: new URLPattern('http{s}?://server/api/users/:id'),
     response(_request, { match, query }) {
+      const { id } = match.pathname.groups
+      const full = query.get('full') != null
       return {
-        body: { id: match.pathname.groups.id, full: query.get('full') != null }
+        body: { id, full }
       }
     }
   }
@@ -148,7 +150,8 @@ test('can mock post fetch call with payload', async () => {
   mockFetch(mockedFetch)
   const response = await fetch('http://server/api/chat', {
     method: 'POST',
-    body: JSON.stringify({ question: 'What is the answer?' })
+    body: JSON.stringify({ question: 'What is the answer?' }),
+    headers: { 'Content-Type': 'application/json' }
   })
   strictEqual(response.status, 200)
   const data = await response.json()

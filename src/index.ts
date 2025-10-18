@@ -39,7 +39,7 @@ export function getFetchConfiguration(): FetchConfiguration {
 }
 
 /**
- * sets one or more `fetch` configuration parameters
+ * set one or more `fetch` configuration parameters
  */
 export function setFetchConfiguration(options: FetchConfiguration) {
   const { handleUnmockedRequests, responseDelay, logging } = options
@@ -61,7 +61,7 @@ export function setFetchConfiguration(options: FetchConfiguration) {
 /**
  * object literal to specify the response content in a simplified way
  */
-interface SimpleResponse {
+export interface SimpleResponse {
   /**
    * a HTTP status code for the response
    * @default 200
@@ -69,9 +69,9 @@ interface SimpleResponse {
   status?: number
 
   /**
-   * a Headers object, an object literal, or an array of two-item arrays to set request's headers
+   * a Headers object, an object literal, or an array of two-item arrays to set request headers
    */
-  headers?: Record<string, string>
+  headers?: Headers | Record<string, string> | [string, string][]
 
   /**
    * a response body, either an object or a value accepted hy the [`Response`] constructor
@@ -100,7 +100,7 @@ const patternSymbol = Symbol('pattern')
 /**
  * additional parameters for the response callback of a mocked `fetch` handler
  */
-interface CallbackOptions {
+export interface ResponseCallbackOptions {
   /**
    * a result of the `URLPattern` execution on the input URL
    */
@@ -117,7 +117,7 @@ interface CallbackOptions {
   query: URLSearchParams
 }
 
-type ResponseCallback = (request: Request, options: CallbackOptions) => Promise<SimpleResponse | Response>
+export type ResponseCallback = (request: Request, options: ResponseCallbackOptions) => Promise<SimpleResponse | Response>
 
 /**
  * provides specification for matching a mocked `fetch` call and the way how to handle its response
@@ -133,6 +133,9 @@ export interface FetchHandler extends FetchSpecification {
    */
   response: SimpleResponse | Response | ResponseCallback
 
+  /**
+   * @private
+   */
   [patternSymbol]?: URLPattern
 }
 
@@ -238,7 +241,7 @@ function normalizeRequestOptions(requestOptions?: RequestInit): RequestInit {
 }
 
 /**
- * checks if a `fetch` call with the provided parameter will be mocked
+ * checks if a `fetch` call with the provided parameters will be mocked
  */
 export function willMockFetch(urlOrRequest: RequestInfo | URL, requestOptions?: RequestInit): boolean {
   const { url } = normalizeRequestURL(urlOrRequest)
@@ -301,29 +304,50 @@ function optionallyAddJSONContentType(responseOptions: ResponseInit) {
 }
 
 async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: RequestInit): Promise<Response> {
+  const start = performance.now()
   let { request, url } = normalizeRequestURL(urlOrRequest)
   requestOptions = normalizeRequestOptions(requestOptions)
   const { method } = requestOptions
 
   const { handler, match } = matchFetchHandler(url, method as string)
+  let response: Response | SimpleResponse | ResponseCallback
   if (!handler) {
     switch (configuration.handleUnmockedRequests) {
       case 'pass-through':
         return originalFetch(urlOrRequest, requestOptions)
       case 'throw-error':
-        throw Error(`Fetch not mocked: ${method} ${url}`)
+        ensureRequest()
+        logError(new Error('Fetch not mocked'))
+        throw new Error(`Fetch not mocked: ${method} ${url}`)
       case 'return-404':
-        return new Response(null, { status: 404 })
+        response = new Response(null, { status: 404 })
+        ensureRequest()
+        logResponse()
+        return response
     }
   }
 
   await waitForDelay(handler.responseDelay ?? configuration.responseDelay)
 
-  if (!request) {
-    request = new Request(url, requestOptions)
+  ensureRequest()
+  let logInput: string | object | undefined
+  if (configuration.logging) {
+    const contentType = (request as Request).headers.get('Content-Type')
+    if (contentType) {
+      if (contentType.startsWith('text/')) {
+        logInput = await (request as Request).text()
+        request = new Request(request as Request, { body: logInput })
+      } else if (contentType.startsWith('application/json')) {
+        const text = await (request as Request).text()
+        logInput = JSON.parse(text)
+        request = new Request(request as Request, { body: text })
+      }
+    }
   }
+
+  ({ response } = handler)
+  let logOutput: string | object | undefined
   try {
-    let { response } = handler
     if (typeof response === 'function') {
       const urlObject = new URL(url)
       const matchOptions = {
@@ -331,23 +355,85 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
         url: urlObject,
         query: new URLSearchParams(urlObject.search)
       }
-      response = await response(request, matchOptions)
+      response = await response(request as Request, matchOptions)
     }
-    if (configuration.logging) {
-      console.info(`MOCK ${method} ${url}`, request, response)
+    if (response instanceof Response) {
+      logResponse()
+      return response
     }
-    if (response instanceof Response) return response
     let { body, ...responseOptions } = response
     if (!canConstructResponseWith(body)) {
+      logOutput = body
       body = JSON.stringify(body)
       optionallyAddJSONContentType(responseOptions)
+    } else if (typeof body === 'string') {
+      logOutput = body
     }
-    return new Response(body as BodyInit, responseOptions)
-  } catch (error) {
-    if (configuration.logging) {
-      console.error(`MOCK ${method}: ${url}`, error)
-    }
+    response = new Response(body as BodyInit, responseOptions)
+    logResponse()
+    return response
+  } catch (error: unknown) {
+    logError(error as Error)
     throw error
+  }
+
+  function ensureRequest(): void {
+    if (!request) {
+      request = new Request(url, requestOptions)
+    }
+  }
+
+  function getDuration(): string {
+    const duration = performance.now() - start
+    return roundDuration(duration / 1000, '') ??
+      roundDuration(duration, 'm') ??
+      roundDuration(duration * 1000, 'µ') as string
+
+    function roundDuration(value: number, prefix: string): string | undefined {
+      value = Math.round(value)
+      if (value >= 1) {
+        return `${value}${prefix}s`
+      }
+    }
+  }
+
+  function objectifyHeaders(source: { headers: Headers }): Record<string, string> {
+    // @ts-expect-error
+    return Object.fromEntries(source.headers.entries())
+  }
+
+  function startRequestLog(): { logFormat: string, logArgs: any[] } {
+    let logFormat = 'MOCK %s %s\n  Request: %o'
+    const logArgs: any[] = [method, url, objectifyHeaders(request as Request)]
+    if (logInput !== undefined) {
+      logFormat += '\n  %o'
+      logArgs.push(logInput)
+    }
+    return { logFormat, logArgs }
+  }
+
+  function finishLog(level: 'info' | 'error', logFormat: string, ...logArgs: any[]): void {
+    console[level](`${logFormat}\n  Duration: %s`, ...logArgs, getDuration())
+  }
+
+  function logError(error: Error): void {
+    if (configuration.logging) {
+      const { logFormat, logArgs } = startRequestLog()
+      finishLog('error', `${logFormat}\n  %o`, logArgs, error)
+    }
+  }
+
+  function logResponse(): void {
+    if (configuration.logging) {
+      let { logFormat, logArgs } = startRequestLog()
+      logFormat += '\n  Response: %d %o'
+      logArgs.push((response as Response).status, objectifyHeaders(response as Response))
+      if (logOutput !== undefined) {
+        logFormat += '\n  %o'
+        logArgs.push(logOutput)
+      }
+      finishLog('info', logFormat, ...logArgs)
+    }
   }
 }
 

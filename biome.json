@@ -18,6 +18,9 @@
       "complexity": {
         "useArrowFunction": "off",
         "useRegexLiterals": "off"
+      },
+      "suspicious": {
+        "noExplicitAny":"off"
       }
     }
   },

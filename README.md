@@ -20,23 +20,23 @@ const { result } = await response.json() // 42
 
 ## Installation
 
-This package is usually installed as a local dependency:
+This package is usually installed as a local development dependency:
 
 ```sh
-$ npm i @mockfetch/mockfetch
+$ npm i -D @mockfetch/mockfetch
 ```
 
 Or loaded on a HTML page from the CDN, declaring a global object `mockfetch` with all named exports:
 
 ```html
-<script src="https://unpkg.com/mockfetch@0.2.0/dist/index.umd.min.js"></script>
+<script src="https://unpkg.com/mockfetch@0.3.0/dist/index.umd.min.js"></script>
 ```
 
 Or imported locally on a HTML page from the CDN, just the needed named exports:
 
 ```html
 <script type="module">
-  import { mockFetch } from 'https://unpkg.com/mockfetch@0.2.0/dist/index.min.js'
+  import { mockFetch } from 'https://unpkg.com/mockfetch@0.3.0/dist/index.min.js'
 </script>
 ```
 
@@ -49,33 +49,27 @@ if (!globalThis.URLPattern) await import('urlpattern-polyfill')
 if (!globalThis.URLSearchParams) await import('url-search-params-polyfill')
 ```
 
-## API
+## Configuration
 
-The following functions are available as named exports:
+The default settings are optimised for fully mocked unit tests:
+
+* Unmocked `fetch` calls are disallowed.
+* Mocked responses are not delayed.
+* Console logging is enabled.
 
 ```ts
-// configuring the mocked behaviour
-getFetchConfiguration()
-setFetchConfiguration({
-  handleUnmockedRequests?,
-  responseDelay?,
-  logging?
-})
+interface FetchConfiguration {
+  handleUnmockedRequests: 'pass-through' | 'return-404' | 'throw-error'
+  responseDelay: number
+  logging: boolean
+}
 
-// registering mocked fetch handles by URL and method
-includesMockedFetch({ url, method? })
-willMockFetch(urlOrRequest, requestOptions?)
-mockFetch({ url, method?, responseDelay?, response })
-unmockFetch({ url, method? })
-unmockAllFetches()
+// get a copy of the current `fetch` configuration
+getFetchConfiguration(): FetchConfiguration
 
-// replacing the global fetch function
-isFetchReplaced()
-replaceFetch()
-restoreFetch()
+// set one or more `fetch` configuration parameters
+setFetchConfiguration(options: FetchConfiguration): void
 ```
-
-Configuration settings:
 
 | Name                     | Default         | Description |
 |:-------------------------|-----------------|:------------|
@@ -83,12 +77,33 @@ Configuration settings:
 | `responseDelay`          |      `0`        | a time duration to delay the mocked requests by default (in milliseconds) |
 | `logging`                |    `true`       | set to `false` to disable logging of succeeded and failed requests on the console |
 
-The defaults are optimised for fully mocked unit tests:
-* Unmocked `fetch` calls are disallowed.
-* Mocked responses are not delayed.
-* Console logging is enabled.
+## Mocking and Unmocking
 
-Mock parameters:
+When looking for a `fetch` mock, the `fetch` handlers are evaluated in the order in which they were registered. The first one which matches the URL and method will be executed.
+
+```ts
+// checks if a `fetch` call with the provided parameters will be mocked
+willMockFetch(urlOrRequest: RequestInfo | URL, requestOptions?: RequestInit): boolean
+
+// registers a mock for a `fetch` call
+mockFetch({
+  url: string | URLPattern,
+  method?: string,
+  responseDelay?: number,
+  response: Response | SimpleResponse | ResponseCallback
+})
+
+// checks if a mocked `fetch` call matching the given specification has been already registered
+includesMockedFetch({ url: string | URLPattern, method?: string }): boolean
+
+// unregisters a mock for a `fetch` call
+unmockFetch({ url: string | URLPattern, method?: string }): void
+
+// unregisters all `fetch` call mocks
+unmockAllFetches(): void
+```
+
+Mock handler parameters, those without a default are mandatory:
 
 | Name            |   Default   | Description |
 |:----------------|-------------|:------------|
@@ -97,11 +112,36 @@ Mock parameters:
 | `responseDelay` | `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
 | `response`      |    none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) returning an object or a [`Response`] |
 
-When the first `fetch` handler mock is registered, the global `fetch` function will be replaced by the mocked one automatically. When the last `fetch` handler mock is unregistered, the global `fetch` function will be restored automatically.
+Simplified object representing the response which can be used instead of a [`Response`] instance:
 
-When looking for a `fetch` mock, the `fetch` handlers are evaluated in the order in which they were registered. The first one which matches the URL and method will be executed.
+```ts
+interface SimpleResponse {
+  status?: number
+  headers?: Headers | Record<string, string> | [string, string][]
+  body?: BodyInit | object
+}
+```
+
+| Name      |   Default   | Description |
+|:----------|-------------|:------------|
+| `status`  |   `200`     | a HTTP status code for the response |
+| `headers` | `undefined` | a Headers object, an object literal, or an array of two-item arrays to set request headers |
+| `body`    | `undefined` | a response body, either an object or a value accepted hy the [`Response`] constructor |
+
+If the `body` property contains a plain object, it'll be stringified and the content type `application/json` will be added to the response headers automatically.
 
 Response callback arguments and result:
+
+```ts
+interface ResponseCallbackOptions {
+  match: URLPatternResult
+  url: URL
+  query: URLSearchParams
+}
+
+type ResponseCallback = (request: Request, options: ResponseCallbackOptions)
+  => Promise<SimpleResponse | Response>
+```
 
 | Name            | Description                                                       |
 |:----------------|:------------------------------------------------------------------|
@@ -112,19 +152,24 @@ Response callback arguments and result:
 | `options.url`   | a [`URL`] instance created from the input URL                     |
 | result          | an object describing the response, or an instance of [`Response`] |
 
-Simplified object representing the response which can be used instead of a [`Response`] instance:
+## Global Fetch
 
-| Name      |   Default   | Description |
-|:----------|-------------|:------------|
-| `status`  |   `200`     | a HTTP status code for the response |
-| `headers` |    none     | a Headers object, an object literal, or an array of two-item arrays to set request's headers |
-| `body`    | `undefined` | a response body, either an object or a value accepted hy the [`Response`] constructor |
+When the first `fetch` handler mock is registered, the global `fetch` function will be replaced by the mocked one automatically. When the last `fetch` handler mock is unregistered, the global `fetch` function will be restored automatically. But it is possible to replace or restore the global `fetch` manually too.
 
-If the `body` property contains a plain object, it'll be stringified and the content type `application/json` will be added to the response headers automatically.
+```ts
+// checks if the global `fetch` function was replaced by the mock-able one
+isFetchReplaced(): boolean
+
+// replaces the global `fetch` function by the mock-able one
+replaceFetch(): void
+
+// restores the original global `fetch` function
+restoreFetch(): void
+```
 
 ## Examples
 
-A mock with URL path and query parameters using an implicit [`URLPattern`]:
+A mock with URL path and query parameters:
 
 ```js
 import { mockFetch } from '@prantlf/mockfetch'
@@ -133,7 +178,9 @@ mockFetch({
   url: 'http{s}?://server/api/users/:id',
   async response(request, { match, query }) {
     try {
-      const user = await users.get(match.pathname.groups.id, query.get('full') != null)
+      const { id } = match.pathname.groups
+      const fullInfo = query.get('full') != null
+      const user = await users.get(id, fullInfo)
       return { body: user }
     } catch (error) {
       return {
@@ -157,7 +204,9 @@ mockjax({
   response({ urlParams }) {
     try {
       const query = new URLSearchParams(urlParams.query)
-      const user = users.getSync(urlParams.id, query.get('full') != null)
+      const { id } = urlParams
+      const fullInfo = query.get('full') != null
+      const user = users.getSync(id, fullInfo)
       this.responseText = user
     } catch (error) {
       this.status = 404
@@ -166,6 +215,20 @@ mockjax({
   }
 })
 ```
+
+And the log:
+
+    MOCK GET http://server/api/users/1
+      Request: {}
+      Response: 200 { 'content-type': 'application/json' }
+      { id: 1, name: 'joe' }
+      Duration: 28ms
+
+    MOCK GET http://server/api/users/2
+      Request: {}
+      Response: 404 { 'content-type': 'application/json' }
+      { error: 'user not found' }
+      Duration: 12ms
 
 A mock of a `POST` request:
 
@@ -176,10 +239,10 @@ mockFetch({
   url: 'http://server/api/echo',
   method: 'POST',
   async response(request) {
-    const body = await request.json()
+    const payload = await request.json()
     return {
       status: 200,
-      body: { requested: body },
+      body: { requested: payload },
       headers: { 'Content-Type': 'application/json' }
     }
   }
@@ -196,13 +259,22 @@ mockjax({
   url: 'http://server/api/echo',
   type: 'POST',
   response({ data }) {
-    const body = JSON.parse(data)
+    const payload = JSON.parse(data)
     this.status = 200
-    this.responseText = { requested: body }
+    this.responseText = { requested: payload }
     this.contentType = 'application/json'
   }
 })
 ```
+
+And the log:
+
+    MOCK POST http://server/api/echo
+      Request: { 'content-type': 'application/json' }
+      { question: 'Hello!' }
+      Response: 200 { 'content-type': 'application/json' }
+      { requested: { question: 'Hello!' } }
+      Duration: 3ms
 
 A failing mock using an explicit [`URLPattern`] for the case-insensitive URL matching:
 
@@ -227,13 +299,20 @@ mockjax({
 })
 ```
 
+And the log:
+
+    MOCK GET http://server/api/ping
+      Request: {}
+      Response: 504 {}
+      Duration: 1ms
+
 A streaming mock:
 
 ```js
 import { mockFetch } from '@prantlf/mockfetch'
 
 mockFetch({
-  url: 'http://server/api/chat',
+  url: 'https://server/api/chat',
   method: 'POST',
   response(request) {
     const messages = [
