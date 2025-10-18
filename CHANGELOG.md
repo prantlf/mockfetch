@@ -1,5 +1,12 @@
 # Changes
 
+## [0.3.0](https://github.com/prantlf/mockfetch/compare/v0.2.0...v0.3.0) (2025-10-18)
+
+### Features
+
+* Log request and response bodies and mock duration ([ea6b382](https://github.com/prantlf/mockfetch/commit/ea6b3828ab42aa6c7ff71c5c63c1a679515badb0))
+* Support URL instance in fetch mock registration ([8aed9ee](https://github.com/prantlf/mockfetch/commit/8aed9ee5551577713fa9a2a35cf75417f39866de))
+
 ## [0.2.0](https://github.com/prantlf/mockfetch/compare/v0.1.1...v0.2.0) (2025-10-17)
 
 ### Features
