@@ -1,5 +1,11 @@
 # Changes
 
+## [0.3.2](https://github.com/prantlf/mockfetch/compare/v0.3.1...v0.3.2) (2025-10-19)
+
+### Bug Fixes
+
+* Re-publish incomplete build ([14bca0c](https://github.com/prantlf/mockfetch/commit/14bca0c4f3bb3c76ceb56d653b4bb573dba098bd))
+
 ## [0.3.1](https://github.com/prantlf/mockfetch/compare/v0.3.0...v0.3.1) (2025-10-19)
 
 ### Bug Fixes
