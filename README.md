@@ -42,14 +42,14 @@ npm i -D @mockfetch/mockfetch
 Or loaded on a HTML page from the CDN, declaring a global object `mockfetch` with all named exports:
 
 ```html
-<script src="https://unpkg.com/mockfetch@0.3.1/dist/index.umd.min.js"></script>
+<script src="https://unpkg.com/mockfetch@0.3.2/dist/index.umd.min.js"></script>
 ```
 
 Or imported locally on a HTML page from the CDN, just the needed named exports:
 
 ```html
 <script type="module">
-  import { mockFetch } from 'https://unpkg.com/mockfetch@0.3.1/dist/index.min.js'
+  import { mockFetch } from 'https://unpkg.com/mockfetch@0.3.2/dist/index.min.js'
 </script>
 ```
 
