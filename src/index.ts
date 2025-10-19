@@ -307,13 +307,16 @@ function optionallyAddJSONContentType(responseOptions: ResponseInit) {
 }
 
 async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: RequestInit): Promise<Response> {
+  let response: Response | SimpleResponse | ResponseCallback
+  let logInput: string | object | undefined
+  let logOutput: string | object | undefined
+
   const start = performance.now()
   let { request, url } = normalizeRequestURL(urlOrRequest)
   requestOptions = normalizeRequestOptions(requestOptions)
   const { method } = requestOptions
 
   const { handler, match } = matchFetchHandler(url, method as string)
-  let response: Response | SimpleResponse | ResponseCallback
   if (!handler) {
     switch (configuration.handleUnmockedRequests) {
       case 'pass-through':
@@ -333,7 +336,6 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   await waitForDelay(handler.responseDelay ?? configuration.responseDelay)
 
   ensureRequest()
-  let logInput: string | object | undefined
   if (configuration.logging) {
     const contentType = (request as Request).headers.get('Content-Type')
     if (contentType) {
@@ -349,7 +351,6 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   }
 
   ({ response } = handler)
-  let logOutput: string | object | undefined
   try {
     if (typeof response === 'function') {
       const urlObject = urlOrRequest instanceof URL
