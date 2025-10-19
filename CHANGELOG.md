@@ -1,5 +1,11 @@
 # Changes
 
+## [0.3.1](https://github.com/prantlf/mockfetch/compare/v0.3.0...v0.3.1) (2025-10-19)
+
+### Bug Fixes
+
+* Prevent lexicographical error of later declated variables ([061a331](https://github.com/prantlf/mockfetch/commit/061a3316bde3cde401e5bc65a7678764cc0e831b))
+
 ## [0.3.0](https://github.com/prantlf/mockfetch/compare/v0.2.0...v0.3.0) (2025-10-18)
 
 ### Features
