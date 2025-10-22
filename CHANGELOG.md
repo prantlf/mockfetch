@@ -1,5 +1,11 @@
 # Changes
 
+## [0.4.1](https://github.com/prantlf/mockfetch/compare/v0.4.0...v0.4.1) (2025-10-22)
+
+### Bug Fixes
+
+* fix: Re-enable automatic publishing ([e958938](https://github.com/prantlf/mockfetch/commit/e9589384b16c29c8f8993a8fed4432d167399ba8))
+
 ## [0.4.0](https://github.com/prantlf/mockfetch/compare/v0.3.2...v0.4.0) (2025-10-22)
 
 ### Features
