@@ -1,5 +1,11 @@
 # Changes
 
+## [0.4.0](https://github.com/prantlf/mockfetch/compare/v0.3.2...v0.4.0) (2025-10-22)
+
+### Features
+
+* Upgrade dependencies ([a5ea276](https://github.com/prantlf/mockfetch/commit/a5ea27659bc9c92d5639c16cc288a8abe7a708c1))
+
 ## [0.3.2](https://github.com/prantlf/mockfetch/compare/v0.3.1...v0.3.2) (2025-10-19)
 
 ### Bug Fixes
