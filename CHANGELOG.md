@@ -1,5 +1,11 @@
 # Changes
 
+## [0.4.2](https://github.com/prantlf/mockfetch/compare/v0.4.1...v0.4.2) (2025-10-22)
+
+### Bug Fixes
+
+* Pass git write access from repo settings to publishing job ([053316c](https://github.com/prantlf/mockfetch/commit/053316c6f9fa9b3c72ab38fa49616091e772de6b))
+
 ## [0.4.1](https://github.com/prantlf/mockfetch/compare/v0.4.0...v0.4.1) (2025-10-22)
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 {
   "name": "@mockfetch/mockfetch",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "description": "Mock the fetch function in the simplest way, including streaming. The interface is similar to the venerable mockjax, just using modern features like URL, URLSearchParams and URLPattern.",
   "author": {
     "name": "Ferdinand Prantl",
