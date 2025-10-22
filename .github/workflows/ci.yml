@@ -6,9 +6,6 @@ on:
       - master
     tags-ignore:
       - '**'
-    paths-ignore:
-      - '**/*.md'
-      - LICENSE
   pull_request:
 
 jobs:
