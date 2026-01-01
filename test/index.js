@@ -181,3 +181,40 @@ test('can mock fetch call with streaming response', async () => {
   const data = await response.text()
   strictEqual(data, 'text')
 })
+
+test('can be aborted', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/stream',
+    response: {}
+  }
+  mockFetch(mockedFetch)
+  const abortController = new AbortController()
+  const promise = fetch('http://server/api/stream', {
+    signal: abortController.signal
+  })
+  abortController.abort()
+  try {
+    await promise
+    fail('aborted fetch succeeded')
+  } catch (error) {
+    strictEqual(error.name, 'AbortError')
+  }
+})
+
+test('lets the exception from response through', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/stream',
+    response() {
+      throw new Error('test')
+    }
+  }
+  mockFetch(mockedFetch)
+  try {
+    await fetch('http://server/api/stream')
+    fail('failed fetch succeeded')
+  } catch (error) {
+    strictEqual(error.message, 'test')
+  }
+})

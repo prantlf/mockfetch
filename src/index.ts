@@ -273,6 +273,32 @@ function waitForDelay(timeDuration: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, timeDuration))
 }
 
+type AbortHelper = {
+  promise: Promise<unknown>
+  performAbort: () => void
+  signal: AbortSignal
+}
+
+function createAbortHelper(signal: AbortSignal): AbortHelper {
+  let rejectAbortError: (reason: any) => void
+  const promise = new Promise((_resolve, reject) => {
+    rejectAbortError = reject
+  })
+  const performAbort = () => {
+    try {
+      signal.throwIfAborted()
+    } catch (error) {
+      rejectAbortError(error)
+    }
+  }
+  signal?.addEventListener('abort', performAbort)
+  return { promise, performAbort, signal }
+}
+
+function destroyAbortHelper(abortHelper: AbortHelper): void {
+  abortHelper.signal?.removeEventListener('abort', abortHelper.performAbort)
+}
+
 function optionallyAddJSONContentType(responseOptions: ResponseInit) {
   const { headers } = responseOptions
   if (!headers) {
@@ -333,9 +359,17 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
     }
   }
 
-  await waitForDelay(handler.responseDelay ?? configuration.responseDelay)
-
   ensureRequest()
+  const abortHelper = createAbortHelper(request!.signal)
+  try {
+    await Promise.race([
+      waitForDelay(handler.responseDelay ?? configuration.responseDelay),
+      abortHelper.promise
+    ])
+  } finally {
+    destroyAbortHelper(abortHelper)
+  }
+
   if (configuration.logging) {
     const contentType = (request as Request).headers.get('Content-Type')
     if (contentType) {
