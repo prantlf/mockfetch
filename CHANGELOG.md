@@ -1,5 +1,12 @@
 # Changes
 
+## [0.5.0](https://github.com/prantlf/mockfetch/compare/v0.4.2...v0.5.0) (2026-01-01)
+
+### Features
+
+* Allow aborting requests waiting for delay ([b46c8ca](https://github.com/prantlf/mockfetch/commit/b46c8caf7fc15fdbf142af39eb3407d922b56a33))
+* Upgrade build dependencies ([5e99ede](https://github.com/prantlf/mockfetch/commit/5e99ede7dfd2351a5a8965166ba1cccf744414f7))
+
 ## [0.4.2](https://github.com/prantlf/mockfetch/compare/v0.4.1...v0.4.2) (2025-10-22)
 
 ### Bug Fixes
