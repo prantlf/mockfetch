@@ -1,5 +1,11 @@
 # Changes
 
+## [0.6.0](https://github.com/prantlf/mockfetch/compare/v0.5.0...v0.6.0) (2026-01-01)
+
+### Features
+
+* Allow aborting requests waiting for response ([1e9ff7a](https://github.com/prantlf/mockfetch/commit/1e9ff7a7203830b53c5198517a31c56b532cf1c5))
+
 ## [0.5.0](https://github.com/prantlf/mockfetch/compare/v0.4.2...v0.5.0) (2026-01-01)
 
 ### Features
