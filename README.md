@@ -5,6 +5,7 @@ Mock the [`fetch` function] in the simplest way, including streaming. The interf
 * Distributes ESM, CJS and UBM bundles.
 * Written in TypeScript, exports types.
 * Small size, 4 KB minified.
+* 100% test coverage.
 * No dependencies.
 
 ## Table of contents

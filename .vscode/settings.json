@@ -5,6 +5,7 @@
     "dist/*.min.*": true
   },
   "search.exclude": {
+    "**/coverage": true,
     "dist/*.d.ts": true,
     "dist/*.cjs": true,
     "dist/*.js": true

@@ -3,7 +3,7 @@ import { afterEach, test } from 'node:test'
 import {
   getFetchConfiguration, setFetchConfiguration,
   includesMockedFetch, mockFetch, unmockFetch, unmockAllFetches,
-  isFetchReplaced, replaceFetch, restoreFetch
+  isFetchReplaced, replaceFetch, restoreFetch, willMockFetch
 } from '../dist/index.js'
 
 if (!globalThis.URLPattern) {
@@ -42,6 +42,12 @@ test('allows changing configuration', () => {
   strictEqual(getFetchConfiguration().responseDelay, 1)
   setFetchConfiguration({ logging: false })
   strictEqual(getFetchConfiguration().logging, false)
+  try {
+    setFetchConfiguration({ handleUnmockedRequests: 'invalid' })
+    fail('invalid configuration accepted')
+  } catch (error) {
+    strictEqual(error.message, 'Invalid handleUnmockedRequests: invalid')
+  }
 })
 
 test('can register and unregister fetch handlers', () => {
@@ -98,6 +104,158 @@ test('can mock fetch call with empty response by string URL', async () => {
   strictEqual(response.status, 200)
   const data = await response.bytes()
   strictEqual(data.length, 0)
+})
+
+test('can fetch by URL instance', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response() {
+      return { body: '' }
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.bytes()
+  strictEqual(data.length, 0)
+})
+
+test('can fetch by Request instance', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/ping',
+    response() {
+      return { body: '' }
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new Request('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.bytes()
+  strictEqual(data.length, 0)
+})
+
+test('set JSON response type automatically', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response: { body: {} }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, '{}')
+  strictEqual(response.headers.get('Content-Type'), 'application/json')
+})
+
+test('set JSON response type automatically if not provided in object', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response: {
+      headers: {},
+      body: {}
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, '{}')
+  strictEqual(response.headers.get('content-type'), 'application/json')
+})
+
+test('keeps JSON response type if provided in object', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response: {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: {}
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, '{}')
+  strictEqual(response.headers.get('Content-Type'), 'application/json; charset=utf-8')
+})
+
+test('set JSON response type automatically if not provided in Headers instance', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response: {
+      headers: new Headers(),
+      body: {}
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, '{}')
+  strictEqual(response.headers.get('content-type'), 'application/json')
+})
+
+test('keeps JSON response type if provided in Headers instance', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response: {
+      headers: new Headers({
+        'Content-Type': 'application/json; charset=utf-8'
+      }),
+      body: {}
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, '{}')
+  strictEqual(response.headers.get('Content-Type'), 'application/json; charset=utf-8')
+})
+
+test('set JSON response type automatically if not provided in Headers instance', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response: {
+      headers: [],
+      body: {}
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, '{}')
+  strictEqual(response.headers.get('content-type'), 'application/json')
+})
+
+test('keeps JSON response type if provided in array', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: new URL('http://server/api/ping'),
+    response: {
+      headers: [
+        ['Content-Type', 'application/json; charset=utf-8']
+      ],
+      body: {}
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch(new URL('http://server/api/ping'))
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, '{}')
+  strictEqual(response.headers.get('Content-Type'), 'application/json; charset=utf-8')
 })
 
 test('can mock failure', async () => {
@@ -182,6 +340,80 @@ test('can mock fetch call with streaming response', async () => {
   strictEqual(data, 'text')
 })
 
+test('chooses GET by default', async () => {
+  setFetchConfiguration({ logging: false })
+  mockFetch({
+    url: 'http://server/api/ping',
+    response: { body: 'GET' }
+  })
+  mockFetch({
+    url: 'http://server/api/ping',
+    method: 'POST',
+    response: { body: 'POST' }
+  })
+  const response = await fetch('http://server/api/ping')
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, 'GET')
+})
+
+test('chooses POST explicitly', async () => {
+  setFetchConfiguration({ logging: false })
+  mockFetch({
+    url: 'http://server/api/ping',
+    response: { body: 'GET' }
+  })
+  mockFetch({
+    url: 'http://server/api/ping',
+    method: 'POST',
+    response: { body: 'POST' }
+  })
+  const response = await fetch('http://server/api/ping', { method: 'POST' })
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, 'POST')
+})
+
+test('can respond with Blob instance', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/ping',
+    response: { body: new Blob(['blob']) }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch('http://server/api/ping')
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, 'blob')
+})
+
+test('requires URL', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    method: 'GET',
+    response: {}
+  }
+  try {
+    mockFetch(mockedFetch)
+    fail('mock without URL succeeded')
+  } catch (error) {
+    strictEqual(error.message, 'Mocked fetch is missing "url"')
+  }
+})
+
+test('requires response', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/stream'
+  }
+  try {
+    mockFetch(mockedFetch)
+    fail('mock without response succeeded')
+  } catch (error) {
+    strictEqual(error.message, 'Mocked fetch is missing "response"')
+  }
+})
+
 test('can be aborted', async () => {
   setFetchConfiguration({ logging: false })
   const mockedFetch = {
@@ -216,5 +448,123 @@ test('lets the exception from response through', async () => {
     fail('failed fetch succeeded')
   } catch (error) {
     strictEqual(error.message, 'test')
+  }
+})
+
+test('fails by default with a missing mock', async () => {
+  setFetchConfiguration({ logging: false })
+  const mockedFetch = {
+    url: 'http://server/api/stream',
+    response: {}
+  }
+  mockFetch(mockedFetch)
+  try {
+    await fetch('http://server/api/missing')
+    fail('missing mock succeeded')
+  } catch (error) {
+    strictEqual(error.message, 'Fetch not mocked: GET http://server/api/missing')
+  }
+})
+
+test('can return 404 if mock is missing', async () => {
+  setFetchConfiguration({
+    logging: false,
+    handleUnmockedRequests: 'return-404'
+  })
+  replaceFetch();
+  const response = await fetch('http://server/api/missing')
+  strictEqual(response.status, 404)
+})
+
+test('can pass-through if mock is missing', async () => {
+  setFetchConfiguration({
+    logging: false,
+    handleUnmockedRequests: 'pass-through'
+  })
+  replaceFetch();
+  try {
+    await fetch('http://server/api/missing')
+    fail('missing mock succeeded')
+  } catch (error) {
+    strictEqual(error.message, 'fetch failed')
+  }
+})
+
+test('checks if request will be mocked', async () => {
+  const mockedFetch = {
+    url: 'http://server/api/stream',
+    response: {}
+  }
+  mockFetch(mockedFetch)
+  ok(willMockFetch('http://server/api/stream'))
+  ok(!willMockFetch('http://server/api/missing'))
+})
+
+test('provides debug logging for GET requests', async () => {
+  const mockedFetch = {
+    url: 'http://server/api/ping',
+    response: {
+      body: 'GET'
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch('http://server/api/ping')
+  strictEqual(response.status, 200)
+  const data = await response.text()
+  strictEqual(data, 'GET')
+})
+
+test('provides debug logging for POST requests', async () => {
+  const mockedFetch = {
+    url: 'http://server/api/chat',
+    method: 'post',
+    async response(request) {
+      const { question } = await request.json()
+      return {
+        body: { question, answer: 42 }
+      }
+    }
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch('http://server/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ question: 'What is the answer?' }),
+    headers: { 'Content-Type': 'application/json' }
+  })
+  strictEqual(response.status, 200)
+  const data = await response.json()
+  ok(typeof data === 'object' && data, 'data is not an object')
+  strictEqual(data.question, 'What is the answer?')
+  strictEqual(data.answer, 42)
+})
+
+test('provides debug logging for POST requests with text payload', async () => {
+  const mockedFetch = {
+    url: 'http://server/api/chat',
+    method: 'post',
+    response: {}
+  }
+  mockFetch(mockedFetch)
+  const response = await fetch('http://server/api/chat', {
+    method: 'POST',
+    body: 'text',
+    headers: { 'Content-Type': 'text/plain' }
+  })
+  strictEqual(response.status, 200)
+  const data = await response.bytes()
+  strictEqual(data.length, 0)
+})
+
+test('provides error logging if a mock is missing', async () => {
+  const mockedFetch = {
+    url: 'http://server/api/stream',
+    response: {}
+  }
+  mockFetch(mockedFetch)
+  try {
+    await fetch('http://server/api/missing')
+    fail('missing mock succeeded')
+  } catch (error) {
+    strictEqual(error.message, 'Fetch not mocked: GET http://server/api/missing')
   }
 })
