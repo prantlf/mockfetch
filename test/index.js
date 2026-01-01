@@ -1,4 +1,4 @@
-import { fail, ok, strictEqual, notStrictEqual } from 'node:assert'
+import { fail, ok, strictEqual, notStrictEqual, AssertionError } from 'node:assert'
 import { afterEach, test } from 'node:test'
 import {
   getFetchConfiguration, setFetchConfiguration,
@@ -46,6 +46,7 @@ test('allows changing configuration', () => {
     setFetchConfiguration({ handleUnmockedRequests: 'invalid' })
     fail('invalid configuration accepted')
   } catch (error) {
+    if (error instanceof AssertionError) throw error
     strictEqual(error.message, 'Invalid handleUnmockedRequests: invalid')
   }
 })
@@ -397,6 +398,7 @@ test('requires URL', async () => {
     mockFetch(mockedFetch)
     fail('mock without URL succeeded')
   } catch (error) {
+    if (error instanceof AssertionError) throw error
     strictEqual(error.message, 'Mocked fetch is missing "url"')
   }
 })
@@ -410,28 +412,86 @@ test('requires response', async () => {
     mockFetch(mockedFetch)
     fail('mock without response succeeded')
   } catch (error) {
+    if (error instanceof AssertionError) throw error
     strictEqual(error.message, 'Mocked fetch is missing "response"')
   }
 })
 
-test('can be aborted', async () => {
+test('can be aborted during waiting', async () => {
   setFetchConfiguration({ logging: false })
+  let responseCalled
   const mockedFetch = {
     url: 'http://server/api/stream',
-    response: {}
+    responseDelay: 1000,
+    response() {
+      responseCalled = true
+      return {}
+    }
   }
   mockFetch(mockedFetch)
   const abortController = new AbortController()
   const promise = fetch('http://server/api/stream', {
     signal: abortController.signal
   })
-  abortController.abort()
-  try {
-    await promise
-    fail('aborted fetch succeeded')
-  } catch (error) {
-    strictEqual(error.name, 'AbortError')
+  return new Promise((resolve, reject) => {
+    setTimeout(async () => {
+      abortController.abort()
+      try {
+        await promise
+        try {
+          fail('aborted fetch succeeded')
+        } catch (error) {
+          reject(error)
+        }
+      } catch (error) {
+        try {
+          ok(!responseCalled, 'response was called despite abort')
+          strictEqual(error.name, 'AbortError')
+          resolve()
+        } catch (error) {
+          reject(error)
+        }
+      }
+    }, 1)
+  })
+})
+
+test('can be aborted during response', async () => {
+  setFetchConfiguration({ logging: false })
+  let responseCalled
+  const mockedFetch = {
+    url: 'http://server/api/stream',
+    response() {
+      responseCalled = true
+      return new Promise(resolve => setTimeout(resolve, 1000))
+    }
   }
+  mockFetch(mockedFetch)
+  const abortController = new AbortController()
+  const promise = fetch('http://server/api/stream', {
+    signal: abortController.signal
+  })
+  return new Promise((resolve, reject) => {
+    setTimeout(async () => {
+      abortController.abort()
+      try {
+        await promise
+        try {
+          fail('aborted fetch succeeded')
+        } catch (error) {
+          reject(error)
+        }
+      } catch (error) {
+        try {
+          ok(responseCalled, 'response was not called')
+          strictEqual(error.name, 'AbortError')
+          resolve()
+        } catch (error) {
+          reject(error)
+        }
+      }
+    }, 1)
+  })
 })
 
 test('lets the exception from response through', async () => {
@@ -447,6 +507,7 @@ test('lets the exception from response through', async () => {
     await fetch('http://server/api/stream')
     fail('failed fetch succeeded')
   } catch (error) {
+    if (error instanceof AssertionError) throw error
     strictEqual(error.message, 'test')
   }
 })
@@ -462,6 +523,7 @@ test('fails by default with a missing mock', async () => {
     await fetch('http://server/api/missing')
     fail('missing mock succeeded')
   } catch (error) {
+    if (error instanceof AssertionError) throw error
     strictEqual(error.message, 'Fetch not mocked: GET http://server/api/missing')
   }
 })
@@ -471,7 +533,7 @@ test('can return 404 if mock is missing', async () => {
     logging: false,
     handleUnmockedRequests: 'return-404'
   })
-  replaceFetch();
+  replaceFetch()
   const response = await fetch('http://server/api/missing')
   strictEqual(response.status, 404)
 })
@@ -481,11 +543,12 @@ test('can pass-through if mock is missing', async () => {
     logging: false,
     handleUnmockedRequests: 'pass-through'
   })
-  replaceFetch();
+  replaceFetch()
   try {
     await fetch('http://server/api/missing')
     fail('missing mock succeeded')
   } catch (error) {
+    if (error instanceof AssertionError) throw error
     strictEqual(error.message, 'fetch failed')
   }
 })
@@ -565,6 +628,7 @@ test('provides error logging if a mock is missing', async () => {
     await fetch('http://server/api/missing')
     fail('missing mock succeeded')
   } catch (error) {
+    if (error instanceof AssertionError) throw error
     strictEqual(error.message, 'Fetch not mocked: GET http://server/api/missing')
   }
 })

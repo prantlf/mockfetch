@@ -360,12 +360,10 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   }
 
   ensureRequest()
-  const abortHelper = createAbortHelper(request!.signal)
+  const abortHelper = createAbortHelper((request as Request).signal)
   try {
-    await Promise.race([
-      waitForDelay(handler.responseDelay ?? configuration.responseDelay),
-      abortHelper.promise
-    ])
+    const waitingPromise = waitForDelay(handler.responseDelay ?? configuration.responseDelay)
+    await Promise.race([waitingPromise, abortHelper.promise])
   } finally {
     destroyAbortHelper(abortHelper)
   }
@@ -395,7 +393,13 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
         url: urlObject,
         query: new URLSearchParams(urlObject.search)
       }
-      response = await response(request as Request, matchOptions)
+      const abortHelper = createAbortHelper((request as Request).signal)
+      try {
+        const responsePromise = response(request as Request, matchOptions)
+        response = await Promise.race([responsePromise, abortHelper.promise]) as SimpleResponse | Response
+      } finally {
+        destroyAbortHelper(abortHelper)
+      }
     }
     if (response instanceof Response) {
       logResponse()

@@ -42,7 +42,7 @@
     "test:ts": "tsc --noEmit test/types.ts",
     "test:js": "node test",
     "test:coverage": "c8 node test",
-    "test": "npm run test:coverage && npm run test:ts && npm run test:js",
+    "test": "npm run lint && npm run test:ts && npm run test:coverage",
     "start": "python3 -m http.server"
   },
   "c8": {

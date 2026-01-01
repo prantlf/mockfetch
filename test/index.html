@@ -21,7 +21,7 @@
       }
     })
 
-    const response = await fetch('http://server/api/chat', {
+    const _response = await fetch('http://server/api/chat', {
       method: 'POST',
       body: JSON.stringify({ question: 'What is the answer?' }),
       headers: { 'Content-Type': 'application/json' }
