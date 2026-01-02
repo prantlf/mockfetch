@@ -495,12 +495,12 @@ test('can be aborted during response', async () => {
 })
 
 test('lets the exception from response through', async () => {
-  setFetchConfiguration({ logging: false })
   const mockedFetch = {
     url: 'http://server/api/stream',
     response() {
       throw new Error('test')
-    }
+    },
+    logging: false
   }
   mockFetch(mockedFetch)
   try {

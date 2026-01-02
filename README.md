@@ -125,6 +125,7 @@ Mock handler parameters, those without a default are mandatory:
 | `method`        |    `GET`    | a HTTP method to match the input method (case-insensitively) |
 | `responseDelay` | `undefined` | override the default time duration to delay the mocked request (in milliseconds) |
 | `response`      |    none     | an object describing the response, or a [`Response`] instance, or a method (synchronous or asynchronous) returning an object or a [`Response`] |
+| `logging`       |    none     | override the default flag for logging of succeeded and failed requests on the console |
 
 Simplified object representing the response which can be used instead of a [`Response`] instance:
 

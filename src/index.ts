@@ -134,6 +134,11 @@ export interface FetchHandler extends FetchSpecification {
   response: SimpleResponse | Response | ResponseCallback
 
   /**
+   * override the default flag for logging of succeeded and failed requests on the console
+   */
+  logging?: boolean
+
+  /**
    * @private
    */
   [patternSymbol]?: URLPattern
@@ -343,6 +348,7 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   const { method } = requestOptions
 
   const { handler, match } = matchFetchHandler(url, method as string)
+  let { logging } = configuration;
   if (!handler) {
     switch (configuration.handleUnmockedRequests) {
       case 'pass-through':
@@ -358,6 +364,9 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
         return response
     }
   }
+  if (handler.logging != null) {
+    logging = handler.logging
+  }
 
   ensureRequest()
   const abortHelper = createAbortHelper((request as Request).signal)
@@ -368,7 +377,7 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
     destroyAbortHelper(abortHelper)
   }
 
-  if (configuration.logging) {
+  if (logging) {
     const contentType = (request as Request).headers.get('Content-Type')
     if (contentType) {
       if (contentType.startsWith('text/')) {
@@ -461,14 +470,14 @@ async function mockedFetch(urlOrRequest: RequestInfo | URL, requestOptions?: Req
   }
 
   function logError(error: Error): void {
-    if (configuration.logging) {
+    if (logging) {
       const { logFormat, logArgs } = startRequestLog()
       finishLog('error', `${logFormat}\n  %o`, logArgs, error)
     }
   }
 
   function logResponse(): void {
-    if (configuration.logging) {
+    if (logging) {
       let { logFormat, logArgs } = startRequestLog()
       logFormat += '\n  Response: %d %o'
       logArgs.push((response as Response).status, objectifyHeaders(response as Response))
