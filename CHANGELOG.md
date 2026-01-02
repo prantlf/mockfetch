@@ -1,5 +1,11 @@
 # Changes
 
+## [0.7.0](https://github.com/prantlf/mockfetch/compare/v0.6.0...v0.7.0) (2026-01-02)
+
+### Features
+
+* Let logging be configurable per mock handler ([169a79f](https://github.com/prantlf/mockfetch/commit/169a79f3527c0222580afa1552404e5ba87834dd))
+
 ## [0.6.0](https://github.com/prantlf/mockfetch/compare/v0.5.0...v0.6.0) (2026-01-01)
 
 ### Features
